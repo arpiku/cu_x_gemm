@@ -1,0 +1,6 @@
+build/
+results/
+*.csv
+*.png
+*.log
+baseline_run.txt

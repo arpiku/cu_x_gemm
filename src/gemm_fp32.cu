@@ -1,12 +1,12 @@
-#include <cuda_bf16.h>
 #include <cuda_runtime.h>
 
 constexpr const char* const VARIANT_ID = "r0";
+constexpr const char* const VARIANT_DESC = "naive";
 
 template <int TILE>
-__global__ void gemm_bf16_kernel(
-    const __nv_bfloat16* __restrict__ A,
-    const __nv_bfloat16* __restrict__ B,
+__global__ void gemm_fp32_kernel(
+    const float* __restrict__ A,
+    const float* __restrict__ B,
     float* __restrict__ C,
     int M, int N, int K,
     float alpha, float beta)
@@ -18,9 +18,7 @@ __global__ void gemm_bf16_kernel(
 
     float sum = 0.0f;
     for (int k = 0; k < K; ++k) {
-        float a = __bfloat162float(A[row * K + k]);
-        float b = __bfloat162float(B[k * N + col]);
-        sum += a * b;
+        sum += A[row * K + k] * B[k * N + col];
     }
 
     if (beta != 0.0f) {
@@ -30,9 +28,9 @@ __global__ void gemm_bf16_kernel(
     }
 }
 
-void launch_gemm_bf16(
-    const __nv_bfloat16* d_A,
-    const __nv_bfloat16* d_B,
+void launch_gemm_fp32(
+    const float* d_A,
+    const float* d_B,
     float* d_C,
     int M, int N, int K,
     float alpha, float beta,
@@ -42,7 +40,8 @@ void launch_gemm_bf16(
     dim3 grid((N + TILE - 1) / TILE, (M + TILE - 1) / TILE);
     dim3 block(TILE, TILE);
 
-    gemm_bf16_kernel<TILE><<<grid, block, 0, stream>>>(d_A, d_B, d_C, M, N, K, alpha, beta);
+    gemm_fp32_kernel<TILE><<<grid, block, 0, stream>>>(d_A, d_B, d_C, M, N, K, alpha, beta);
 }
 
-const char* get_variant_id_bf16() { return VARIANT_ID; }
+const char* get_variant_id_fp32() { return VARIANT_ID; }
+const char* get_variant_desc_fp32() { return VARIANT_DESC; }

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
 #include <string>
 
 // ============ BENCHMARK CONFIG ============
@@ -14,19 +15,32 @@ constexpr int NUM_DIMS = sizeof(DIMENSIONS) / sizeof(DIMENSIONS[0]);
 
 constexpr int WARMUP_ITERATIONS = 10;
 constexpr int MEASURE_ITERATIONS = 50;
+
+constexpr const char* CSV_PATH = "results/benchmark_results.csv";
 // ==========================================
 
 extern void launch_gemm_bf16(const __nv_bfloat16*, const __nv_bfloat16*, float*,
     int, int, int, float, float, cudaStream_t);
 extern const char* get_variant_id_bf16();
+extern const char* get_variant_desc_bf16();
 
 extern void launch_gemm_fp32(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
 extern const char* get_variant_id_fp32();
+extern const char* get_variant_desc_fp32();
 
 extern void cublas_gemm_bf16(cublasHandle_t, const __nv_bfloat16*, const __nv_bfloat16*, float*,
     int, int, int, float, float);
-extern void cublas_gemm_fp32(cublasHandle_t, const float*, const float*, float*,
+extern void cublas_gemm_bf16_tc(cublasHandle_t, const __nv_bfloat16*, const __nv_bfloat16*, float*,
+    int, int, int, float, float);
+
+extern void cublas_gemm_fp32_sgemm(cublasHandle_t, const float*, const float*, float*,
+    int, int, int, float, float);
+extern void cublas_gemm_fp32_cuda(cublasHandle_t, const float*, const float*, float*,
+    int, int, int, float, float);
+extern void cublas_gemm_fp32_pedantic(cublasHandle_t, const float*, const float*, float*,
+    int, int, int, float, float);
+extern void cublas_gemm_fp32_tc(cublasHandle_t, const float*, const float*, float*,
     int, int, int, float, float);
 
 static void init_bf16(__nv_bfloat16* ptr, int n, unsigned seed) {
@@ -51,8 +65,23 @@ static float compute_l2_error(const float* a, const float* b, int n) {
     return float(sqrt(sum) / (sqrt(ref) + 1e-10));
 }
 
-static void benchmark_bf16(int dim, cublasHandle_t handle, cudaStream_t stream,
-    float* out_custom_ms, float* out_cublas_ms, float* out_l2_error) {
+struct BF16Result {
+    float custom_ms;
+    float cublas_ms;
+    float cublas_tc_ms;
+    float l2_error;
+};
+
+struct FP32Result {
+    float custom_ms;
+    float sgemm_ms;
+    float cuda_ms;
+    float pedantic_ms;
+    float tc_ms;
+    float l2_error;
+};
+
+static void benchmark_bf16(int dim, cublasHandle_t handle, cudaStream_t stream, BF16Result* out) {
     int N = dim;
     size_t bytes_A = N * N * sizeof(__nv_bfloat16);
     size_t bytes_C = N * N * sizeof(float);
@@ -74,42 +103,45 @@ static void benchmark_bf16(int dim, cublasHandle_t handle, cudaStream_t stream,
     cudaMemset(d_C, 0, bytes_C);
     cudaMemset(d_C_ref, 0, bytes_C);
 
-    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        launch_gemm_bf16(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
-    cudaStreamSynchronize(stream);
-
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
+    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
+        launch_gemm_bf16(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
+    cudaStreamSynchronize(stream);
+
     cudaEventRecord(start, stream);
     for (int i = 0; i < MEASURE_ITERATIONS; ++i)
         launch_gemm_bf16(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
     cudaEventRecord(stop, stream);
     cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&out->custom_ms, start, stop);
+    out->custom_ms /= MEASURE_ITERATIONS;
 
-    cudaEventElapsedTime(out_custom_ms, start, stop);
-    *out_custom_ms /= MEASURE_ITERATIONS;
+    auto bench_cublas = [&](auto func, float* out_ms) {
+        cudaMemset(d_C_ref, 0, bytes_C);
+        for (int i = 0; i < WARMUP_ITERATIONS; ++i)
+            func(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
+        cudaStreamSynchronize(stream);
 
-    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        cublas_gemm_bf16(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-    cudaStreamSynchronize(stream);
+        cudaEventRecord(start, stream);
+        for (int i = 0; i < MEASURE_ITERATIONS; ++i)
+            func(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
+        cudaEventRecord(stop, stream);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(out_ms, start, stop);
+        *out_ms /= MEASURE_ITERATIONS;
+    };
 
-    cudaEventRecord(start, stream);
-    for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-        cublas_gemm_bf16(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-    cudaEventRecord(stop, stream);
-    cudaEventSynchronize(stop);
-
-    cudaEventElapsedTime(out_cublas_ms, start, stop);
-    *out_cublas_ms /= MEASURE_ITERATIONS;
+    bench_cublas(cublas_gemm_bf16, &out->cublas_ms);
+    bench_cublas(cublas_gemm_bf16_tc, &out->cublas_tc_ms);
 
     float* h_C = (float*)malloc(bytes_C);
     float* h_C_ref = (float*)malloc(bytes_C);
     cudaMemcpy(h_C, d_C, bytes_C, cudaMemcpyDeviceToHost);
     cudaMemcpy(h_C_ref, d_C_ref, bytes_C, cudaMemcpyDeviceToHost);
-
-    *out_l2_error = compute_l2_error(h_C, h_C_ref, N * N);
+    out->l2_error = compute_l2_error(h_C, h_C_ref, N * N);
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
@@ -117,8 +149,7 @@ static void benchmark_bf16(int dim, cublasHandle_t handle, cudaStream_t stream,
     free(h_A); free(h_B); free(h_C); free(h_C_ref);
 }
 
-static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream,
-    float* out_custom_ms, float* out_cublas_ms, float* out_l2_error) {
+static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream, FP32Result* out) {
     int N = dim;
     size_t bytes = N * N * sizeof(float);
 
@@ -138,47 +169,76 @@ static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream,
     cudaMemset(d_C, 0, bytes);
     cudaMemset(d_C_ref, 0, bytes);
 
-    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        launch_gemm_fp32(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
-    cudaStreamSynchronize(stream);
-
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
+    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
+        launch_gemm_fp32(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
+    cudaStreamSynchronize(stream);
+
     cudaEventRecord(start, stream);
     for (int i = 0; i < MEASURE_ITERATIONS; ++i)
         launch_gemm_fp32(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
     cudaEventRecord(stop, stream);
     cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&out->custom_ms, start, stop);
+    out->custom_ms /= MEASURE_ITERATIONS;
 
-    cudaEventElapsedTime(out_custom_ms, start, stop);
-    *out_custom_ms /= MEASURE_ITERATIONS;
+    auto bench_cublas = [&](auto func, float* out_ms) {
+        cudaMemset(d_C_ref, 0, bytes);
+        for (int i = 0; i < WARMUP_ITERATIONS; ++i)
+            func(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
+        cudaStreamSynchronize(stream);
 
-    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        cublas_gemm_fp32(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-    cudaStreamSynchronize(stream);
+        cudaEventRecord(start, stream);
+        for (int i = 0; i < MEASURE_ITERATIONS; ++i)
+            func(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
+        cudaEventRecord(stop, stream);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(out_ms, start, stop);
+        *out_ms /= MEASURE_ITERATIONS;
+    };
 
-    cudaEventRecord(start, stream);
-    for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-        cublas_gemm_fp32(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-    cudaEventRecord(stop, stream);
-    cudaEventSynchronize(stop);
-
-    cudaEventElapsedTime(out_cublas_ms, start, stop);
-    *out_cublas_ms /= MEASURE_ITERATIONS;
+    bench_cublas(cublas_gemm_fp32_sgemm, &out->sgemm_ms);
+    bench_cublas(cublas_gemm_fp32_cuda, &out->cuda_ms);
+    bench_cublas(cublas_gemm_fp32_pedantic, &out->pedantic_ms);
+    bench_cublas(cublas_gemm_fp32_tc, &out->tc_ms);
 
     float* h_C = (float*)malloc(bytes);
     float* h_C_ref = (float*)malloc(bytes);
     cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
     cudaMemcpy(h_C_ref, d_C_ref, bytes, cudaMemcpyDeviceToHost);
-
-    *out_l2_error = compute_l2_error(h_C, h_C_ref, N * N);
+    out->l2_error = compute_l2_error(h_C, h_C_ref, N * N);
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
     cudaFree(d_A); cudaFree(d_B); cudaFree(d_C); cudaFree(d_C_ref);
     free(h_A); free(h_B); free(h_C); free(h_C_ref);
+}
+
+static void write_csv(const std::string& path,
+                      const int* dims, int num_dims,
+                      const BF16Result* bf16_results,
+                      const FP32Result* fp32_results,
+                      const char* variant_bf16, const char* desc_bf16,
+                      const char* variant_fp32, const char* desc_fp32) {
+    std::ofstream f(path);
+    f << "dim,dtype,variant,desc,custom_ms,cublas_32f_ms,cublas_tc_ms,"
+       << "sgemm_ms,cuda_ms,pedantic_ms,tc_ms,l2_error\n";
+    for (int i = 0; i < num_dims; ++i) {
+        const auto& r = bf16_results[i];
+        f << dims[i] << ",BF16," << variant_bf16 << "," << desc_bf16 << ","
+          << r.custom_ms << "," << r.cublas_ms << "," << r.cublas_tc_ms << ",,,,"
+          << r.l2_error << "\n";
+    }
+    for (int i = 0; i < num_dims; ++i) {
+        const auto& r = fp32_results[i];
+        f << dims[i] << ",FP32," << variant_fp32 << "," << desc_fp32 << ","
+          << r.custom_ms << ",,,"
+          << r.sgemm_ms << "," << r.cuda_ms << "," << r.pedantic_ms << "," << r.tc_ms << ","
+          << r.l2_error << "\n";
+    }
 }
 
 int main(int argc, char** argv) {
@@ -194,34 +254,52 @@ int main(int argc, char** argv) {
     cudaStreamCreate(&stream);
     cublasSetStream(handle, stream);
 
-    printf("%-6s %-6s %-12s %10s %10s %7s %10s\n",
-        "Dim", "Type", "Variant", "Custom(ms)", "CuBLAS(ms)", "Ratio%", "L2_Error");
-    printf("%s\n", std::string(70, '-').c_str());
-
     const char* variant_bf16 = get_variant_id_bf16();
+    const char* desc_bf16 = get_variant_desc_bf16();
     const char* variant_fp32 = get_variant_id_fp32();
+    const char* desc_fp32 = get_variant_desc_fp32();
+
+    BF16Result bf16_results[NUM_DIMS];
+    FP32Result fp32_results[NUM_DIMS];
+
+    printf("=== BF16 ===\n");
+    printf("%-6s %-4s %-8s %10s %10s %10s %7s %10s\n",
+        "Dim", "Ver", "Desc", "Custom(ms)", "CuBLAS(ms)", "CuBLAS-TC(ms)", "Ratio%", "L2_Error");
+    printf("%s\n", std::string(78, '-').c_str());
 
     for (int d = 0; d < NUM_DIMS; ++d) {
         int dim = DIMENSIONS[d];
-        float custom_ms, cublas_ms, l2_error;
-
-        benchmark_bf16(dim, handle, stream, &custom_ms, &cublas_ms, &l2_error);
-        float ratio = (cublas_ms / custom_ms) * 100.0f;
-        printf("%-6d %-6s %-12s %10.4f %10.4f %6.1f%% %10.2e\n",
-            dim, "BF16", variant_bf16, custom_ms, cublas_ms, ratio, l2_error);
+        benchmark_bf16(dim, handle, stream, &bf16_results[d]);
+        const auto& r = bf16_results[d];
+        float ratio = (r.cublas_ms / r.custom_ms) * 100.0f;
+        printf("%-6d %-4s %-8s %10.4f %10.4f %10.4f %6.1f%% %10.2e\n",
+            dim, variant_bf16, desc_bf16, r.custom_ms, r.cublas_ms, r.cublas_tc_ms, ratio, r.l2_error);
     }
 
-    printf("\n");
+    printf("\n=== FP32 ===\n");
+    printf("%-6s %-4s %-8s %10s %10s %10s %10s %10s %6s %6s %6s %6s %10s\n",
+        "Dim", "Ver", "Desc", "Custom(ms)", "Sgemm(ms)", "CUDA(ms)", "Pedant(ms)", "TC(ms)",
+        "Sg%", "CU%", "Pd%", "TC%", "L2_Err");
+    printf("%s\n", std::string(115, '-').c_str());
 
     for (int d = 0; d < NUM_DIMS; ++d) {
         int dim = DIMENSIONS[d];
-        float custom_ms, cublas_ms, l2_error;
+        benchmark_fp32(dim, handle, stream, &fp32_results[d]);
+        const auto& r = fp32_results[d];
 
-        benchmark_fp32(dim, handle, stream, &custom_ms, &cublas_ms, &l2_error);
-        float ratio = (cublas_ms / custom_ms) * 100.0f;
-        printf("%-6d %-6s %-12s %10.4f %10.4f %6.1f%% %10.2e\n",
-            dim, "FP32", variant_fp32, custom_ms, cublas_ms, ratio, l2_error);
+        float r_sgemm = (r.sgemm_ms / r.custom_ms) * 100.0f;
+        float r_cuda = (r.cuda_ms / r.custom_ms) * 100.0f;
+        float r_pedantic = (r.pedantic_ms / r.custom_ms) * 100.0f;
+        float r_tc = (r.tc_ms / r.custom_ms) * 100.0f;
+
+        printf("%-6d %-4s %-8s %10.4f %10.4f %10.4f %10.4f %10.4f %5.1f%% %5.1f%% %5.1f%% %5.1f%% %10.2e\n",
+            dim, variant_fp32, desc_fp32, r.custom_ms, r.sgemm_ms, r.cuda_ms, r.pedantic_ms, r.tc_ms,
+            r_sgemm, r_cuda, r_pedantic, r_tc, r.l2_error);
     }
+
+    write_csv(CSV_PATH, DIMENSIONS, NUM_DIMS, bf16_results, fp32_results,
+              variant_bf16, desc_bf16, variant_fp32, desc_fp32);
+    printf("\n# CSV written to %s\n", CSV_PATH);
 
     cublasDestroy(handle);
     cudaStreamDestroy(stream);

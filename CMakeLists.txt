@@ -11,8 +11,8 @@ find_package(OpenMP REQUIRED)
 add_executable(cu_x_gemm
     src/main.cu
     src/cublas_gemm.cu
-    src/gemm_bf16_r0.cu
-    src/gemm_fp32_r0.cu
+    src/gemm_bf16.cu
+    src/gemm_fp32.cu
 )
 
 target_link_libraries(cu_x_gemm PRIVATE
