@@ -14,6 +14,8 @@ add_executable(cu_x_gemm
     src/gemm_bf16.cu
     src/gemm_fp32_r1a.cu
     src/gemm_fp32_r1b.cu
+    src/gemm_fp32_r1c.cu
+    src/gemm_fp32_r1d.cu
 )
 
 target_link_libraries(cu_x_gemm PRIVATE

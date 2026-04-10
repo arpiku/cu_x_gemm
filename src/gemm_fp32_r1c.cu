@@ -1,15 +1,15 @@
 #include <cuda_runtime.h>
 
 namespace tile_config {
-    constexpr int BM = 32;
-    constexpr int BN = 32;
-    constexpr int BK = 32;
-    constexpr int THREAD_TILE_M = 1;
-    constexpr int THREAD_TILE_N = 1;
+    constexpr int BM = 128;
+    constexpr int BN = 64;
+    constexpr int BK = 64;
+    constexpr int THREAD_TILE_M = 4;
+    constexpr int THREAD_TILE_N = 4;
 }
 
-constexpr const char* const VARIANT_ID = "r1a_baseline";
-constexpr const char* const VARIANT_DESC = "32x32_smem_1x1";
+constexpr const char* const VARIANT_ID = "r1c_128x64";
+constexpr const char* const VARIANT_DESC = "128x64_smem_4x4";
 
 template <int BM, int BN, int BK, int TM, int TN>
 __global__ void gemm_fp32_tiled_kernel(
@@ -80,7 +80,7 @@ __global__ void gemm_fp32_tiled_kernel(
     }
 }
 
-void launch_gemm_fp32_r1a(
+void launch_gemm_fp32_r1c(
     const float* d_A,
     const float* d_B,
     float* d_C,
@@ -101,5 +101,5 @@ void launch_gemm_fp32_r1a(
         <<<grid, block, 0, stream>>>(d_A, d_B, d_C, M, N, K, alpha, beta);
 }
 
-const char* get_variant_id_fp32_r1a() { return VARIANT_ID; }
-const char* get_variant_desc_fp32_r1a() { return VARIANT_DESC; }
+const char* get_variant_id_fp32_r1c() { return VARIANT_ID; }
+const char* get_variant_desc_fp32_r1c() { return VARIANT_DESC; }

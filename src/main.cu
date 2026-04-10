@@ -8,7 +8,7 @@
 #include <string>
 
 // ============ BENCHMARK CONFIG ============
-// SELECT FP32 VARIANT: 1 = r1a (1x1), 2 = r1b (4x4)
+// SELECT FP32 VARIANT: 1 = r1a (32x32), 2 = r1b (64x64), 3 = r1c (128x64), 4 = r1d (128x128)
 #define FP32_VARIANT 2
 
 constexpr bool TEST_ALL_VARIANTS = true;
@@ -35,7 +35,7 @@ extern const char* get_variant_desc_fp32_r1a();
 #define launch_gemm_fp32 launch_gemm_fp32_r1a
 #define get_variant_id_fp32 get_variant_id_fp32_r1a
 #define get_variant_desc_fp32 get_variant_desc_fp32_r1a
-#else
+#elif FP32_VARIANT == 2
 extern void launch_gemm_fp32_r1b(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
 extern const char* get_variant_id_fp32_r1b();
@@ -43,6 +43,22 @@ extern const char* get_variant_desc_fp32_r1b();
 #define launch_gemm_fp32 launch_gemm_fp32_r1b
 #define get_variant_id_fp32 get_variant_id_fp32_r1b
 #define get_variant_desc_fp32 get_variant_desc_fp32_r1b
+#elif FP32_VARIANT == 3
+extern void launch_gemm_fp32_r1c(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t);
+extern const char* get_variant_id_fp32_r1c();
+extern const char* get_variant_desc_fp32_r1c();
+#define launch_gemm_fp32 launch_gemm_fp32_r1c
+#define get_variant_id_fp32 get_variant_id_fp32_r1c
+#define get_variant_desc_fp32 get_variant_desc_fp32_r1c
+#else
+extern void launch_gemm_fp32_r1d(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t);
+extern const char* get_variant_id_fp32_r1d();
+extern const char* get_variant_desc_fp32_r1d();
+#define launch_gemm_fp32 launch_gemm_fp32_r1d
+#define get_variant_id_fp32 get_variant_id_fp32_r1d
+#define get_variant_desc_fp32 get_variant_desc_fp32_r1d
 #endif
 
 extern void cublas_gemm_bf16(cublasHandle_t, const __nv_bfloat16*, const __nv_bfloat16*, float*,
@@ -263,9 +279,13 @@ int main(int argc, char** argv) {
     printf("# GPU: %s (SM %d.%d)\n", prop.name, prop.major, prop.minor);
     printf("# TEST_ALL_VARIANTS: %s\n", TEST_ALL_VARIANTS ? "true" : "false");
 #if FP32_VARIANT == 1
-    printf("# FP32_VARIANT: r1a (1x1 tile)\n\n");
+    printf("# FP32_VARIANT: r1a (32x32 tile)\n\n");
+#elif FP32_VARIANT == 2
+    printf("# FP32_VARIANT: r1b (64x64 tile)\n\n");
+#elif FP32_VARIANT == 3
+    printf("# FP32_VARIANT: r1c (128x64 tile)\n\n");
 #else
-    printf("# FP32_VARIANT: r1b (4x4 tile)\n\n");
+    printf("# FP32_VARIANT: r1d (128x128 tile)\n\n");
 #endif
 
     cublasHandle_t handle;
