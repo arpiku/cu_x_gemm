@@ -7,14 +7,19 @@ int main() {
     for (int d = 0; d < device_count; d++) {
         cudaDeviceProp p;
         cudaGetDeviceProperties(&p, d);
+
+        int clockRate, memoryClockRate;
+        cudaDeviceGetAttribute(&clockRate, cudaDevAttrClockRate, d);
+        cudaDeviceGetAttribute(&memoryClockRate, cudaDevAttrMemoryClockRate, d);
+
         printf("=== Device %d: %s (SM %d.%d) ===\n", d, p.name, p.major, p.minor);
         printf("  multiProcessorCount       = %d\n", p.multiProcessorCount);
         printf("  maxThreadsPerMultiProcessor = %d\n", p.maxThreadsPerMultiProcessor);
         printf("  maxThreadsPerBlock          = %d\n", p.maxThreadsPerBlock);
         printf("  maxThreadsDim               = %d x %d x %d\n", p.maxThreadsDim[0], p.maxThreadsDim[1], p.maxThreadsDim[2]);
         printf("  maxGridSize                 = %d x %d x %d\n", p.maxGridSize[0], p.maxGridSize[1], p.maxGridSize[2]);
-        printf("  clockRate                   = %d kHz (%.2f GHz boost)\n", p.clockRate, p.clockRate / 1e6);
-        printf("  memoryClockRate              = %d kHz (%.2f GHz)\n", p.memoryClockRate, p.memoryClockRate / 1e6);
+        printf("  clockRate                   = %d kHz (%.2f GHz boost)\n", clockRate, clockRate / 1e6);
+        printf("  memoryClockRate              = %d kHz (%.2f GHz)\n", memoryClockRate, memoryClockRate / 1e6);
         printf("  memoryBusWidth               = %d bits\n", p.memoryBusWidth);
         printf("  totalGlobalMem              = %.0f MB\n", p.totalGlobalMem / (1024.0 * 1024.0));
         printf("  sharedMemPerBlock           = %zu KB\n", p.sharedMemPerBlock / 1024);
@@ -25,7 +30,7 @@ int main() {
         printf("  warpSize                    = %d\n", p.warpSize);
         printf("  totalConstMem               = %zu KB\n", p.totalConstMem / 1024);
         printf("  memoryBandwidth             = %.1f GB/s\n",
-               2.0 * p.memoryBusWidth / 8.0 * p.memoryClockRate * 1e3 / 1e9);
+               2.0 * p.memoryBusWidth / 8.0 * memoryClockRate * 1e3 / 1e9);
     }
     return 0;
 }
