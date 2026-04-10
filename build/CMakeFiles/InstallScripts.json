@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/arpiku/cu_x_gemm/build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
