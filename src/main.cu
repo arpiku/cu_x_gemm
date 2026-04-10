@@ -24,10 +24,10 @@ extern void launch_gemm_bf16(const __nv_bfloat16*, const __nv_bfloat16*, float*,
 extern const char* get_variant_id_bf16();
 extern const char* get_variant_desc_bf16();
 
-extern void launch_gemm_fp32(const float*, const float*, float*,
+extern void launch_gemm_fp32_r1(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32();
-extern const char* get_variant_desc_fp32();
+extern const char* get_variant_id_fp32_r1();
+extern const char* get_variant_desc_fp32_r1();
 
 extern void cublas_gemm_bf16(cublasHandle_t, const __nv_bfloat16*, const __nv_bfloat16*, float*,
     int, int, int, float, float);
@@ -174,12 +174,12 @@ static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream, 
     cudaEventCreate(&stop);
 
     for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        launch_gemm_fp32(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
+        launch_gemm_fp32_r1(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
     cudaStreamSynchronize(stream);
 
     cudaEventRecord(start, stream);
     for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-        launch_gemm_fp32(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
+        launch_gemm_fp32_r1(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
     cudaEventRecord(stop, stream);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&out->custom_ms, start, stop);
@@ -256,8 +256,8 @@ int main(int argc, char** argv) {
 
     const char* variant_bf16 = get_variant_id_bf16();
     const char* desc_bf16 = get_variant_desc_bf16();
-    const char* variant_fp32 = get_variant_id_fp32();
-    const char* desc_fp32 = get_variant_desc_fp32();
+    const char* variant_fp32 = get_variant_id_fp32_r1();
+    const char* desc_fp32 = get_variant_desc_fp32_r1();
 
     BF16Result bf16_results[NUM_DIMS];
     FP32Result fp32_results[NUM_DIMS];
