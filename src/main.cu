@@ -8,6 +8,9 @@
 #include <string>
 
 // ============ BENCHMARK CONFIG ============
+// SELECT FP32 VARIANT: 1 = r1a (1x1), 2 = r1b (4x4)
+#define FP32_VARIANT 2
+
 constexpr bool TEST_ALL_VARIANTS = true;
 
 constexpr int DIMENSIONS[] = {32, 64, 128, 256, 512, 1024, 2048, 4096};
@@ -24,10 +27,23 @@ extern void launch_gemm_bf16(const __nv_bfloat16*, const __nv_bfloat16*, float*,
 extern const char* get_variant_id_bf16();
 extern const char* get_variant_desc_bf16();
 
-extern void launch_gemm_fp32_r1(const float*, const float*, float*,
+#if FP32_VARIANT == 1
+extern void launch_gemm_fp32_r1a(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r1();
-extern const char* get_variant_desc_fp32_r1();
+extern const char* get_variant_id_fp32_r1a();
+extern const char* get_variant_desc_fp32_r1a();
+#define launch_gemm_fp32 launch_gemm_fp32_r1a
+#define get_variant_id_fp32 get_variant_id_fp32_r1a
+#define get_variant_desc_fp32 get_variant_desc_fp32_r1a
+#else
+extern void launch_gemm_fp32_r1b(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t);
+extern const char* get_variant_id_fp32_r1b();
+extern const char* get_variant_desc_fp32_r1b();
+#define launch_gemm_fp32 launch_gemm_fp32_r1b
+#define get_variant_id_fp32 get_variant_id_fp32_r1b
+#define get_variant_desc_fp32 get_variant_desc_fp32_r1b
+#endif
 
 extern void cublas_gemm_bf16(cublasHandle_t, const __nv_bfloat16*, const __nv_bfloat16*, float*,
     int, int, int, float, float);
@@ -174,12 +190,12 @@ static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream, 
     cudaEventCreate(&stop);
 
     for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        launch_gemm_fp32_r1(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
+        launch_gemm_fp32(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
     cudaStreamSynchronize(stream);
 
     cudaEventRecord(start, stream);
     for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-        launch_gemm_fp32_r1(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
+        launch_gemm_fp32(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
     cudaEventRecord(stop, stream);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&out->custom_ms, start, stop);
@@ -245,7 +261,12 @@ int main(int argc, char** argv) {
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
     printf("# GPU: %s (SM %d.%d)\n", prop.name, prop.major, prop.minor);
-    printf("# TEST_ALL_VARIANTS: %s\n\n", TEST_ALL_VARIANTS ? "true" : "false");
+    printf("# TEST_ALL_VARIANTS: %s\n", TEST_ALL_VARIANTS ? "true" : "false");
+#if FP32_VARIANT == 1
+    printf("# FP32_VARIANT: r1a (1x1 tile)\n\n");
+#else
+    printf("# FP32_VARIANT: r1b (4x4 tile)\n\n");
+#endif
 
     cublasHandle_t handle;
     cublasCreate(&handle);
@@ -256,8 +277,8 @@ int main(int argc, char** argv) {
 
     const char* variant_bf16 = get_variant_id_bf16();
     const char* desc_bf16 = get_variant_desc_bf16();
-    const char* variant_fp32 = get_variant_id_fp32_r1();
-    const char* desc_fp32 = get_variant_desc_fp32_r1();
+    const char* variant_fp32 = get_variant_id_fp32();
+    const char* desc_fp32 = get_variant_desc_fp32();
 
     BF16Result bf16_results[NUM_DIMS];
     FP32Result fp32_results[NUM_DIMS];
