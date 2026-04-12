@@ -12,10 +12,14 @@ add_executable(cu_x_gemm
     src/main.cu
     src/cublas_gemm.cu
     src/gemm_bf16.cu
-    src/gemm_fp32_r1a.cu
-    src/gemm_fp32_r1b.cu
-    src/gemm_fp32_r1c.cu
-    src/gemm_fp32_r1d.cu
+    src/gemm_fp32.cu
+    src/gemm_fp32_r1x.cu
+    src/gemm_fp32_r1y.cu
+    src/gemm_fp32_r2x.cu
+    src/gemm_fp32_r2y.cu
+    src/gemm_fp32_r2z.cu
+    src/gemm_fp32_r2z2.cu
+    src/gemm_fp32_master.cu
 )
 
 target_link_libraries(cu_x_gemm PRIVATE

@@ -17,8 +17,9 @@ __global__ void gemm_fp32_kernel(
     if (row >= M || col >= N) return;
 
     float sum = 0.0f;
+    #pragma unroll 4
     for (int k = 0; k < K; ++k) {
-        sum += A[row * K + k] * B[k * N + col];
+        sum += __ldg(&A[row * K + k]) * __ldg(&B[k * N + col]);
     }
 
     if (beta != 0.0f) {
@@ -28,7 +29,7 @@ __global__ void gemm_fp32_kernel(
     }
 }
 
-void launch_gemm_fp32(
+void launch_gemm_fp32_naive(
     const float* d_A,
     const float* d_B,
     float* d_C,
@@ -43,5 +44,5 @@ void launch_gemm_fp32(
     gemm_fp32_kernel<TILE><<<grid, block, 0, stream>>>(d_A, d_B, d_C, M, N, K, alpha, beta);
 }
 
-const char* get_variant_id_fp32() { return VARIANT_ID; }
-const char* get_variant_desc_fp32() { return VARIANT_DESC; }
+const char* get_variant_id_fp32_naive() { return VARIANT_ID; }
+const char* get_variant_desc_fp32_naive() { return VARIANT_DESC; }

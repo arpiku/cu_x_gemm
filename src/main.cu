@@ -4,12 +4,25 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <string>
 
 // ============ BENCHMARK CONFIG ============
-// SELECT FP32 VARIANT: 1 = r1a (32x32), 2 = r1b (64x64), 3 = r1c (128x64), 4 = r1d (128x128)
-#define FP32_VARIANT 2
+// ACTIVE VARIANTS:
+//   1 = naive   (gemm_fp32.cu)              - __ldg + unroll4
+//   2 = r1x     (gemm_fp32_r1x.cu)          - 2D blocks, ~15% cuBLAS
+//   3 = r1y     (gemm_fp32_r1y.cu)          - 1D blocks, ~24% cuBLAS
+//   4 = r2x     (gemm_fp32_r2x.cu)          - float4 + transpose-A, ~81% cuBLAS
+//   5 = r2y     (gemm_fp32_r2y.cu)          - warp tiling, ~84% cuBLAS
+//   6 = master  (gemm_fp32_master.cu)        - auto-select by M*N threshold
+//   7 = r2z     (gemm_fp32_r2z.cu)          - r2y with corrected K-loop
+//   8 = r2z2    (gemm_fp32_r2z2.cu)         - r2z + double buffer + cp.async B
+//
+// SCRATCH VARIANTS (archived in scratch/):
+//   See scratch/SCRATCH_INDEX.md to re-enable
+//
+#define FP32_VARIANT 6
 
 constexpr bool TEST_ALL_VARIANTS = true;
 
@@ -28,37 +41,72 @@ extern const char* get_variant_id_bf16();
 extern const char* get_variant_desc_bf16();
 
 #if FP32_VARIANT == 1
-extern void launch_gemm_fp32_r1a(const float*, const float*, float*,
+extern void launch_gemm_fp32_naive(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r1a();
-extern const char* get_variant_desc_fp32_r1a();
-#define launch_gemm_fp32 launch_gemm_fp32_r1a
-#define get_variant_id_fp32 get_variant_id_fp32_r1a
-#define get_variant_desc_fp32 get_variant_desc_fp32_r1a
+extern const char* get_variant_id_fp32_naive();
+extern const char* get_variant_desc_fp32_naive();
+#define launch_gemm_fp32 launch_gemm_fp32_naive
+#define get_variant_id_fp32 get_variant_id_fp32_naive
+#define get_variant_desc_fp32 get_variant_desc_fp32_naive
 #elif FP32_VARIANT == 2
-extern void launch_gemm_fp32_r1b(const float*, const float*, float*,
+extern void launch_gemm_fp32_r1x(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r1b();
-extern const char* get_variant_desc_fp32_r1b();
-#define launch_gemm_fp32 launch_gemm_fp32_r1b
-#define get_variant_id_fp32 get_variant_id_fp32_r1b
-#define get_variant_desc_fp32 get_variant_desc_fp32_r1b
+extern const char* get_variant_id_fp32_r1x();
+extern const char* get_variant_desc_fp32_r1x();
+#define launch_gemm_fp32 launch_gemm_fp32_r1x
+#define get_variant_id_fp32 get_variant_id_fp32_r1x
+#define get_variant_desc_fp32 get_variant_desc_fp32_r1x
 #elif FP32_VARIANT == 3
-extern void launch_gemm_fp32_r1c(const float*, const float*, float*,
+extern void launch_gemm_fp32_r1y(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r1c();
-extern const char* get_variant_desc_fp32_r1c();
-#define launch_gemm_fp32 launch_gemm_fp32_r1c
-#define get_variant_id_fp32 get_variant_id_fp32_r1c
-#define get_variant_desc_fp32 get_variant_desc_fp32_r1c
-#else
-extern void launch_gemm_fp32_r1d(const float*, const float*, float*,
+extern const char* get_variant_id_fp32_r1y();
+extern const char* get_variant_desc_fp32_r1y();
+#define launch_gemm_fp32 launch_gemm_fp32_r1y
+#define get_variant_id_fp32 get_variant_id_fp32_r1y
+#define get_variant_desc_fp32 get_variant_desc_fp32_r1y
+#elif FP32_VARIANT == 4
+extern void launch_gemm_fp32_r2x(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r1d();
-extern const char* get_variant_desc_fp32_r1d();
-#define launch_gemm_fp32 launch_gemm_fp32_r1d
-#define get_variant_id_fp32 get_variant_id_fp32_r1d
-#define get_variant_desc_fp32 get_variant_desc_fp32_r1d
+extern const char* get_variant_id_fp32_r2x();
+extern const char* get_variant_desc_fp32_r2x();
+#define launch_gemm_fp32 launch_gemm_fp32_r2x
+#define get_variant_id_fp32 get_variant_id_fp32_r2x
+#define get_variant_desc_fp32 get_variant_desc_fp32_r2x
+#elif FP32_VARIANT == 5
+extern void launch_gemm_fp32_r2y(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t);
+extern const char* get_variant_id_fp32_r2y();
+extern const char* get_variant_desc_fp32_r2y();
+#define launch_gemm_fp32 launch_gemm_fp32_r2y
+#define get_variant_id_fp32 get_variant_id_fp32_r2y
+#define get_variant_desc_fp32 get_variant_desc_fp32_r2y
+#elif FP32_VARIANT == 6
+extern void launch_gemm_fp32_master(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t);
+extern void launch_gemm_fp32_master_debug(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t, const char**);
+extern const char* get_variant_id_fp32_master();
+extern const char* get_variant_desc_fp32_master();
+#define launch_gemm_fp32 launch_gemm_fp32_master
+#define get_variant_id_fp32 get_variant_id_fp32_master
+#define get_variant_desc_fp32 get_variant_desc_fp32_master
+#define MASTER_MODE 1
+#elif FP32_VARIANT == 7
+extern void launch_gemm_fp32_r2z(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t);
+extern const char* get_variant_id_fp32_r2z();
+extern const char* get_variant_desc_fp32_r2z();
+#define launch_gemm_fp32 launch_gemm_fp32_r2z
+#define get_variant_id_fp32 get_variant_id_fp32_r2z
+#define get_variant_desc_fp32 get_variant_desc_fp32_r2z
+#elif FP32_VARIANT == 8
+extern void launch_gemm_fp32_r2z2(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t);
+extern const char* get_variant_id_fp32_r2z2();
+extern const char* get_variant_desc_fp32_r2z2();
+#define launch_gemm_fp32 launch_gemm_fp32_r2z2
+#define get_variant_id_fp32 get_variant_id_fp32_r2z2
+#define get_variant_desc_fp32 get_variant_desc_fp32_r2z2
 #endif
 
 extern void cublas_gemm_bf16(cublasHandle_t, const __nv_bfloat16*, const __nv_bfloat16*, float*,
@@ -181,6 +229,10 @@ static void benchmark_bf16(int dim, cublasHandle_t handle, cudaStream_t stream, 
     free(h_A); free(h_B); free(h_C); free(h_C_ref);
 }
 
+#if FP32_VARIANT == 6
+static const char* selected_kernel_names[NUM_DIMS];
+#endif
+
 static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream, FP32Result* out) {
     int N = dim;
     size_t bytes = N * N * sizeof(float);
@@ -205,6 +257,35 @@ static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream, 
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
+#if FP32_VARIANT == 6
+    const char* selected_kernel = nullptr;
+    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
+        launch_gemm_fp32_master_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, &selected_kernel);
+    cudaStreamSynchronize(stream);
+
+    cudaEventRecord(start, stream);
+    for (int i = 0; i < MEASURE_ITERATIONS; ++i)
+        launch_gemm_fp32_master_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, &selected_kernel);
+    cudaEventRecord(stop, stream);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&out->custom_ms, start, stop);
+    out->custom_ms /= MEASURE_ITERATIONS;
+    
+    // Store selected kernel name for this dimension
+    int dim_idx = -1;
+    for (int i = 0; i < NUM_DIMS; ++i) {
+        if (DIMENSIONS[i] == dim) {
+            dim_idx = i;
+            break;
+        }
+    }
+    if (dim_idx >= 0 && selected_kernel != nullptr) {
+        static char kernel_copy[32];
+        strncpy(kernel_copy, selected_kernel, 31);
+        kernel_copy[31] = '\0';
+        selected_kernel_names[dim_idx] = kernel_copy;
+    }
+#else
     for (int i = 0; i < WARMUP_ITERATIONS; ++i)
         launch_gemm_fp32(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
     cudaStreamSynchronize(stream);
@@ -216,6 +297,7 @@ static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream, 
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&out->custom_ms, start, stop);
     out->custom_ms /= MEASURE_ITERATIONS;
+#endif
 
     auto bench_cublas = [&](auto func, float* out_ms) {
         cudaMemset(d_C_ref, 0, bytes);
@@ -279,13 +361,23 @@ int main(int argc, char** argv) {
     printf("# GPU: %s (SM %d.%d)\n", prop.name, prop.major, prop.minor);
     printf("# TEST_ALL_VARIANTS: %s\n", TEST_ALL_VARIANTS ? "true" : "false");
 #if FP32_VARIANT == 1
-    printf("# FP32_VARIANT: r1a (32x32 tile)\n\n");
+    printf("# FP32_VARIANT: naive (baseline)\n\n");
 #elif FP32_VARIANT == 2
-    printf("# FP32_VARIANT: r1b (64x64 tile)\n\n");
+    printf("# FP32_VARIANT: r1x (2D blocks, 15%% of CuBLAS)\n\n");
 #elif FP32_VARIANT == 3
-    printf("# FP32_VARIANT: r1c (128x64 tile)\n\n");
+    printf("# FP32_VARIANT: r1y (1D blocks, 24%% of CuBLAS)\n\n");
+#elif FP32_VARIANT == 4
+    printf("# FP32_VARIANT: r2x (float4 + transpose-A, ~50%% of CuBLAS)\n\n");
+#elif FP32_VARIANT == 5
+    printf("# FP32_VARIANT: r2y (warp tiling + double buffering, ~80%% of CuBLAS)\n\n");
+#elif FP32_VARIANT == 6
+    printf("# FP32_VARIANT: master (auto-select based on size)\n\n");
+#elif FP32_VARIANT == 7
+    printf("# FP32_VARIANT: r2z (corrected K-loop, single buffer)\n\n");
+#elif FP32_VARIANT == 8
+    printf("# FP32_VARIANT: r2z2 (double buffer + cp.async B)\n\n");
 #else
-    printf("# FP32_VARIANT: r1d (128x128 tile)\n\n");
+    printf("# FP32_VARIANT: unknown (check config)\n\n");
 #endif
 
     cublasHandle_t handle;
@@ -318,6 +410,28 @@ int main(int argc, char** argv) {
     }
 
     printf("\n=== FP32 ===\n");
+#if FP32_VARIANT == 6
+    printf("%-6s %-8s %-10s %10s %10s %10s %10s %10s %6s %6s %6s %6s %10s\n",
+        "Dim", "Selected", "Kernel", "Custom", "Sgemm", "CUDA", "Pedant", "TC(ms)",
+        "Sg%", "CU%", "Pd%", "TC%", "L2_Err");
+    printf("%s\n", std::string(100, '-').c_str());
+
+    for (int d = 0; d < NUM_DIMS; ++d) {
+        int dim = DIMENSIONS[d];
+        benchmark_fp32(dim, handle, stream, &fp32_results[d]);
+        const auto& r = fp32_results[d];
+
+        float r_sgemm = (r.sgemm_ms / r.custom_ms) * 100.0f;
+        float r_cuda = (r.cuda_ms / r.custom_ms) * 100.0f;
+        float r_pedantic = (r.pedantic_ms / r.custom_ms) * 100.0f;
+        float r_tc = (r.tc_ms / r.custom_ms) * 100.0f;
+
+        const char* sel = selected_kernel_names[d] ? selected_kernel_names[d] : "unknown";
+        printf("%-6d %-8s %-10s %10.4f %10.4f %10.4f %10.4f %10.4f %5.1f%% %5.1f%% %5.1f%% %5.1f%% %10.2e\n",
+            dim, sel, desc_fp32, r.custom_ms, r.sgemm_ms, r.cuda_ms, r.pedantic_ms, r.tc_ms,
+            r_sgemm, r_cuda, r_pedantic, r_tc, r.l2_error);
+    }
+#else
     printf("%-6s %-4s %-8s %10s %10s %10s %10s %10s %6s %6s %6s %6s %10s\n",
         "Dim", "Ver", "Desc", "Custom(ms)", "Sgemm(ms)", "CUDA(ms)", "Pedant(ms)", "TC(ms)",
         "Sg%", "CU%", "Pd%", "TC%", "L2_Err");
@@ -337,6 +451,7 @@ int main(int argc, char** argv) {
             dim, variant_fp32, desc_fp32, r.custom_ms, r.sgemm_ms, r.cuda_ms, r.pedantic_ms, r.tc_ms,
             r_sgemm, r_cuda, r_pedantic, r_tc, r.l2_error);
     }
+#endif
 
     write_csv(CSV_PATH, DIMENSIONS, NUM_DIMS, bf16_results, fp32_results,
               variant_bf16, desc_bf16, variant_fp32, desc_fp32);
