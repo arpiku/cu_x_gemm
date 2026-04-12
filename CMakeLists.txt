@@ -13,12 +13,11 @@ add_executable(cu_x_gemm
     src/cublas_gemm.cu
     src/gemm_bf16.cu
     src/gemm_fp32.cu
-    src/gemm_fp32_r1y.cu
-    src/gemm_fp32_r2x.cu
-    src/gemm_fp32_r2z.cu
-    src/gemm_fp32_r2z2.cu
-    src/gemm_fp32_r2z2_small.cu
-    src/gemm_fp32_r3x.cu
+    src/gemm_fp32_r2z_128.cu
+    src/gemm_fp32_r2z_512.cu
+    src/gemm_fp32_r2z_1024.cu
+    src/gemm_fp32_r2z_2048.cu
+    src/gemm_fp32_r2z_4096.cu
     src/gemm_fp32_master.cu
 )
 

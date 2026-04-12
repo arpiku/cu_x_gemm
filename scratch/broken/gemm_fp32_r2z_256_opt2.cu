@@ -1,30 +1,31 @@
 #include <cuda_runtime.h>
 #include <cuda_pipeline.h>
 
-// r2z2: double-buffered SMEM + async B loads via cp.async
+// r2z_256_opt2: Option 2 - 128x64 tiles, TM=8, TN=8, 128 threads
 //
-// Key optimizations over r2z:
-//   - Double-buffer SMEM: As[2][BK*BM], Bs[2][BK*BN] = 32 KB total (fits in 48 KB limit)
-//   - B tiles loaded via __pipeline_memcpy_async: hardware async copy engine,
-//     bypasses L1 cache, overlaps with the FMA compute on the current tile
-//   - A tiles still use float4 global loads + scatter-transpose into SMEM;
-//     issued at the top of each iteration to maximise latency hiding
-//   - One __syncthreads per K-iteration instead of one load-sync + one compute-sync
+// TUNING: Taller tiles (BM=128) for better M-dimension parallelism
+//         TM=8, TN=8 gives 128 threads = (128/8)*(64/8) = 16*8
+//         Each thread handles 8x8=64 floats (more register reuse)
+//
+// Key optimizations:
+//   - Double-buffer SMEM: As[2][BK*BM], Bs[2][BK*BN] = 24 KB total
+//   - B tiles loaded via __pipeline_memcpy_async
+//   - A tiles use float4 global loads + scatter-transpose into SMEM
 
-namespace r2z2_small_config {
-    constexpr int BM = 64;
+namespace r2z_256_opt2_config {
+    constexpr int BM = 128;  // Taller tiles
     constexpr int BN = 64;
     constexpr int BK = 16;
-    constexpr int WM = 32;
-    constexpr int WN = 32;
-    constexpr int WNITER = 1;  // Changed: WMITER = (32*32)/(32*8*4*1) = 1
+    constexpr int WM = 64;
+    constexpr int WN = 64;
+    constexpr int WNITER = 2;
     constexpr int TM = 8;
-    constexpr int TN = 4;
-    constexpr int NUM_THREADS = 128;
+    constexpr int TN = 8;
+    constexpr int NUM_THREADS = 128;  // (128/8)*(64/8) = 16*8 = 128
 }
 
-constexpr const char* const VARIANT_ID   = "r2z2_small";
-constexpr const char* const VARIANT_DESC = "64x64_warp2_128t_db_async";
+constexpr const char* const VARIANT_ID   = "r2z_256_opt2";
+constexpr const char* const VARIANT_DESC = "128x64_128t_db_async_opt2";
 
 template <int BM, int BN, int BK,
           int WM, int WN, int WNITER,
@@ -227,7 +228,7 @@ void gemm_fp32_r2z2_kernel(
     }
 }
 
-void launch_gemm_fp32_r2z2_small(
+void launch_gemm_fp32_r2z_256_opt2(
     const float* d_A,
     const float* d_B,
     float*       d_C,
@@ -235,7 +236,7 @@ void launch_gemm_fp32_r2z2_small(
     float alpha, float beta,
     cudaStream_t stream)
 {
-    using namespace r2z2_small_config;
+    using namespace r2z_256_opt2_config;
     dim3 grid((N + BN - 1) / BN, (M + BM - 1) / BM);
     dim3 block(NUM_THREADS);
 
@@ -243,5 +244,5 @@ void launch_gemm_fp32_r2z2_small(
         <<<grid, block, 0, stream>>>(d_A, d_B, d_C, M, N, K, alpha, beta);
 }
 
-const char* get_variant_id_fp32_r2z2_small()   { return VARIANT_ID; }
-const char* get_variant_desc_fp32_r2z2_small() { return VARIANT_DESC; }
+const char* get_variant_id_fp32_r2z_256_opt2()   { return VARIANT_ID; }
+const char* get_variant_desc_fp32_r2z_256_opt2() { return VARIANT_DESC; }

@@ -11,20 +11,19 @@
 // ============ BENCHMARK CONFIG ============
 // ACTIVE VARIANTS:
 //   1 = naive   (gemm_fp32.cu)              - __ldg + unroll4
-//   2 = r1x     (gemm_fp32_r1x.cu)          - 2D blocks, ~15% cuBLAS
-//   3 = r1y     (gemm_fp32_r1y.cu)          - 1D blocks, ~24% cuBLAS
-//   4 = r2x     (gemm_fp32_r2x.cu)          - float4 + transpose-A, ~81% cuBLAS
-//   5 = r2y     (gemm_fp32_r2y.cu)          - warp tiling, ~84% cuBLAS
-//   6 = master  (gemm_fp32_master.cu)        - auto-select by M*N threshold
-//   7 = r2z     (gemm_fp32_r2z.cu)          - r2y with corrected K-loop
-//   8 = r2z2    (gemm_fp32_r2z2.cu)         - r2z + double buffer + cp.async B
-//   9 = r3x     (gemm_fp32_r3x.cu)          - 64x64 tiles, double buffer
-//   10 = r2z2_small (gemm_fp32_r2z2_small.cu) - 64x64 r2z2 for small sizes
+//   2 = r2z_128 (gemm_fp32_r2z_128.cu)      - 64x64 tiles, for size 128
+//   3 = r2z_256 (gemm_fp32_r2z_256.cu)      - 64x64 tiles, 256 threads, for size 256
+//   4 = r2z_512 (gemm_fp32_r2z_512.cu)      - 64x64 tiles, for size 512 (~91%)
+//   5 = r2z_1024 (gemm_fp32_r2z_1024.cu)    - 64x64 tiles, for size 1024
+//   6 = r2z_2048 (gemm_fp32_r2z_2048.cu)    - 128x128 tiles, for size 2048
+//   7 = r2z_4096 (gemm_fp32_r2z_4096.cu)    - 128x128 tiles, for size 4096 (~98%)
+//   8 = master  (gemm_fp32_master.cu)       - auto-select by size
 //
 // SCRATCH VARIANTS (archived in scratch/):
-//   See scratch/SCRATCH_INDEX.md to re-enable
+//   r1x, r1y, r2x, r2y, r2z, r2z2, r2z2_small, r3x
+//   See scratch/SCRATCH_INDEX.md for details
 //
-#define FP32_VARIANT 10
+#define FP32_VARIANT 8
 
 constexpr bool TEST_ALL_VARIANTS = true;
 
@@ -51,38 +50,54 @@ extern const char* get_variant_desc_fp32_naive();
 #define get_variant_id_fp32 get_variant_id_fp32_naive
 #define get_variant_desc_fp32 get_variant_desc_fp32_naive
 #elif FP32_VARIANT == 2
-extern void launch_gemm_fp32_r1x(const float*, const float*, float*,
+extern void launch_gemm_fp32_r2z_128(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r1x();
-extern const char* get_variant_desc_fp32_r1x();
-#define launch_gemm_fp32 launch_gemm_fp32_r1x
-#define get_variant_id_fp32 get_variant_id_fp32_r1x
-#define get_variant_desc_fp32 get_variant_desc_fp32_r1x
+extern const char* get_variant_id_fp32_r2z_128();
+extern const char* get_variant_desc_fp32_r2z_128();
+#define launch_gemm_fp32 launch_gemm_fp32_r2z_128
+#define get_variant_id_fp32 get_variant_id_fp32_r2z_128
+#define get_variant_desc_fp32 get_variant_desc_fp32_r2z_128
 #elif FP32_VARIANT == 3
-extern void launch_gemm_fp32_r1y(const float*, const float*, float*,
+extern void launch_gemm_fp32_r2z_256(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r1y();
-extern const char* get_variant_desc_fp32_r1y();
-#define launch_gemm_fp32 launch_gemm_fp32_r1y
-#define get_variant_id_fp32 get_variant_id_fp32_r1y
-#define get_variant_desc_fp32 get_variant_desc_fp32_r1y
+extern const char* get_variant_id_fp32_r2z_256();
+extern const char* get_variant_desc_fp32_r2z_256();
+#define launch_gemm_fp32 launch_gemm_fp32_r2z_256
+#define get_variant_id_fp32 get_variant_id_fp32_r2z_256
+#define get_variant_desc_fp32 get_variant_desc_fp32_r2z_256
 #elif FP32_VARIANT == 4
-extern void launch_gemm_fp32_r2x(const float*, const float*, float*,
+extern void launch_gemm_fp32_r2z_512(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r2x();
-extern const char* get_variant_desc_fp32_r2x();
-#define launch_gemm_fp32 launch_gemm_fp32_r2x
-#define get_variant_id_fp32 get_variant_id_fp32_r2x
-#define get_variant_desc_fp32 get_variant_desc_fp32_r2x
+extern const char* get_variant_id_fp32_r2z_512();
+extern const char* get_variant_desc_fp32_r2z_512();
+#define launch_gemm_fp32 launch_gemm_fp32_r2z_512
+#define get_variant_id_fp32 get_variant_id_fp32_r2z_512
+#define get_variant_desc_fp32 get_variant_desc_fp32_r2z_512
 #elif FP32_VARIANT == 5
-extern void launch_gemm_fp32_r2y(const float*, const float*, float*,
+extern void launch_gemm_fp32_r2z_1024(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r2y();
-extern const char* get_variant_desc_fp32_r2y();
-#define launch_gemm_fp32 launch_gemm_fp32_r2y
-#define get_variant_id_fp32 get_variant_id_fp32_r2y
-#define get_variant_desc_fp32 get_variant_desc_fp32_r2y
+extern const char* get_variant_id_fp32_r2z_1024();
+extern const char* get_variant_desc_fp32_r2z_1024();
+#define launch_gemm_fp32 launch_gemm_fp32_r2z_1024
+#define get_variant_id_fp32 get_variant_id_fp32_r2z_1024
+#define get_variant_desc_fp32 get_variant_desc_fp32_r2z_1024
 #elif FP32_VARIANT == 6
+extern void launch_gemm_fp32_r2z_2048(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t);
+extern const char* get_variant_id_fp32_r2z_2048();
+extern const char* get_variant_desc_fp32_r2z_2048();
+#define launch_gemm_fp32 launch_gemm_fp32_r2z_2048
+#define get_variant_id_fp32 get_variant_id_fp32_r2z_2048
+#define get_variant_desc_fp32 get_variant_desc_fp32_r2z_2048
+#elif FP32_VARIANT == 7
+extern void launch_gemm_fp32_r2z_4096(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t);
+extern const char* get_variant_id_fp32_r2z_4096();
+extern const char* get_variant_desc_fp32_r2z_4096();
+#define launch_gemm_fp32 launch_gemm_fp32_r2z_4096
+#define get_variant_id_fp32 get_variant_id_fp32_r2z_4096
+#define get_variant_desc_fp32 get_variant_desc_fp32_r2z_4096
+#elif FP32_VARIANT == 8
 extern void launch_gemm_fp32_master(const float*, const float*, float*,
     int, int, int, float, float, cudaStream_t);
 extern void launch_gemm_fp32_master_debug(const float*, const float*, float*,
@@ -93,38 +108,6 @@ extern const char* get_variant_desc_fp32_master();
 #define get_variant_id_fp32 get_variant_id_fp32_master
 #define get_variant_desc_fp32 get_variant_desc_fp32_master
 #define MASTER_MODE 1
-#elif FP32_VARIANT == 7
-extern void launch_gemm_fp32_r2z(const float*, const float*, float*,
-    int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r2z();
-extern const char* get_variant_desc_fp32_r2z();
-#define launch_gemm_fp32 launch_gemm_fp32_r2z
-#define get_variant_id_fp32 get_variant_id_fp32_r2z
-#define get_variant_desc_fp32 get_variant_desc_fp32_r2z
-#elif FP32_VARIANT == 8
-extern void launch_gemm_fp32_r2z2(const float*, const float*, float*,
-    int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r2z2();
-extern const char* get_variant_desc_fp32_r2z2();
-#define launch_gemm_fp32 launch_gemm_fp32_r2z2
-#define get_variant_id_fp32 get_variant_id_fp32_r2z2
-#define get_variant_desc_fp32 get_variant_desc_fp32_r2z2
-#elif FP32_VARIANT == 9
-extern void launch_gemm_fp32_r3x(const float*, const float*, float*,
-    int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r3x();
-extern const char* get_variant_desc_fp32_r3x();
-#define launch_gemm_fp32 launch_gemm_fp32_r3x
-#define get_variant_id_fp32 get_variant_id_fp32_r3x
-#define get_variant_desc_fp32 get_variant_desc_fp32_r3x
-#elif FP32_VARIANT == 10
-extern void launch_gemm_fp32_r2z2_small(const float*, const float*, float*,
-    int, int, int, float, float, cudaStream_t);
-extern const char* get_variant_id_fp32_r2z2_small();
-extern const char* get_variant_desc_fp32_r2z2_small();
-#define launch_gemm_fp32 launch_gemm_fp32_r2z2_small
-#define get_variant_id_fp32 get_variant_id_fp32_r2z2_small
-#define get_variant_desc_fp32 get_variant_desc_fp32_r2z2_small
 #endif
 
 extern void cublas_gemm_bf16(cublasHandle_t, const __nv_bfloat16*, const __nv_bfloat16*, float*,
@@ -381,23 +364,19 @@ int main(int argc, char** argv) {
 #if FP32_VARIANT == 1
     printf("# FP32_VARIANT: naive (baseline)\n\n");
 #elif FP32_VARIANT == 2
-    printf("# FP32_VARIANT: r1x (2D blocks, 15%% of CuBLAS)\n\n");
+    printf("# FP32_VARIANT: r2z_128 (64x64 tiles, for size 128)\n\n");
 #elif FP32_VARIANT == 3
-    printf("# FP32_VARIANT: r1y (1D blocks, 24%% of CuBLAS)\n\n");
+    printf("# FP32_VARIANT: r2z_256 (64x64 tiles, 256 threads, for size 256)\n\n");
 #elif FP32_VARIANT == 4
-    printf("# FP32_VARIANT: r2x (float4 + transpose-A, ~50%% of CuBLAS)\n\n");
+    printf("# FP32_VARIANT: r2z_512 (64x64 tiles, ~91%% at 512)\n\n");
 #elif FP32_VARIANT == 5
-    printf("# FP32_VARIANT: r2y (warp tiling + double buffering, ~80%% of CuBLAS)\n\n");
+    printf("# FP32_VARIANT: r2z_1024 (64x64 tiles, for size 1024)\n\n");
 #elif FP32_VARIANT == 6
-    printf("# FP32_VARIANT: master (auto-select based on size)\n\n");
+    printf("# FP32_VARIANT: r2z_2048 (128x128 tiles, for size 2048)\n\n");
 #elif FP32_VARIANT == 7
-    printf("# FP32_VARIANT: r2z (corrected K-loop, single buffer)\n\n");
+    printf("# FP32_VARIANT: r2z_4096 (128x128 tiles, ~98%% at 4096)\n\n");
 #elif FP32_VARIANT == 8
-    printf("# FP32_VARIANT: r2z2 (double buffer + cp.async B)\n\n");
-#elif FP32_VARIANT == 9
-    printf("# FP32_VARIANT: r3x (64x64 tiles, 2 thread configs)\n\n");
-#elif FP32_VARIANT == 10
-    printf("# FP32_VARIANT: r2z2_small (64x64 r2z2 for small sizes)\n\n");
+    printf("# FP32_VARIANT: master (auto-select by size)\n\n");
 #else
     printf("# FP32_VARIANT: unknown (check config)\n\n");
 #endif

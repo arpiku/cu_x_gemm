@@ -1,7 +1,7 @@
 #include <cuda_runtime.h>
 #include <cuda_pipeline.h>
 
-// r2z2: double-buffered SMEM + async B loads via cp.async
+// r2z_2048: double-buffered SMEM + async B loads via cp.async
 //
 // Key optimizations over r2z:
 //   - Double-buffer SMEM: As[2][BK*BM], Bs[2][BK*BN] = 32 KB total (fits in 48 KB limit)
@@ -11,7 +11,7 @@
 //     issued at the top of each iteration to maximise latency hiding
 //   - One __syncthreads per K-iteration instead of one load-sync + one compute-sync
 
-namespace r2z2_config {
+namespace r2z_2048_config {
     constexpr int BM = 128;
     constexpr int BN = 128;
     constexpr int BK = 16;
@@ -23,14 +23,14 @@ namespace r2z2_config {
     constexpr int NUM_THREADS = 128;
 }
 
-constexpr const char* const VARIANT_ID   = "r2z2";
+constexpr const char* const VARIANT_ID   = "r2z_2048";
 constexpr const char* const VARIANT_DESC = "128x128_warp4_128t_db_async";
 
 template <int BM, int BN, int BK,
           int WM, int WN, int WNITER,
           int TM, int TN, int NUM_THREADS>
 __global__ __launch_bounds__(NUM_THREADS)
-void gemm_fp32_r2z2_kernel(
+void gemm_fp32_r2z_2048_kernel(
     const float* __restrict__ A,
     const float* __restrict__ B,
     float*       __restrict__ C,
@@ -227,7 +227,7 @@ void gemm_fp32_r2z2_kernel(
     }
 }
 
-void launch_gemm_fp32_r2z2(
+void launch_gemm_fp32_r2z_2048(
     const float* d_A,
     const float* d_B,
     float*       d_C,
@@ -235,13 +235,13 @@ void launch_gemm_fp32_r2z2(
     float alpha, float beta,
     cudaStream_t stream)
 {
-    using namespace r2z2_config;
+    using namespace r2z_2048_config;
     dim3 grid((N + BN - 1) / BN, (M + BM - 1) / BM);
     dim3 block(NUM_THREADS);
 
-    gemm_fp32_r2z2_kernel<BM, BN, BK, WM, WN, WNITER, TM, TN, NUM_THREADS>
+    gemm_fp32_r2z_2048_kernel<BM, BN, BK, WM, WN, WNITER, TM, TN, NUM_THREADS>
         <<<grid, block, 0, stream>>>(d_A, d_B, d_C, M, N, K, alpha, beta);
 }
 
-const char* get_variant_id_fp32_r2z2()   { return VARIANT_ID; }
-const char* get_variant_desc_fp32_r2z2() { return VARIANT_DESC; }
+const char* get_variant_id_fp32_r2z_2048()   { return VARIANT_ID; }
+const char* get_variant_desc_fp32_r2z_2048() { return VARIANT_DESC; }
