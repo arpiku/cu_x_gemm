@@ -58,7 +58,7 @@ void cublas_gemm_fp32_sgemm(
         C, N);
 }
 
-void cublas_gemm_fp32_cuda( //
+void cublas_gemm_fp32_cuda( // legacy diagnostic path
     cublasHandle_t handle,
     const float* A,
     const float* B,
@@ -77,7 +77,7 @@ void cublas_gemm_fp32_cuda( //
         CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT);
 }
 
-void cublas_gemm_fp32_pedantic( // forcefully using CUDA cores instead of Tensor Cores 
+void cublas_gemm_fp32_pedantic( // primary CUDA-core reference (pure FP32)
     cublasHandle_t handle,
     const float* A,
     const float* B,
@@ -96,7 +96,7 @@ void cublas_gemm_fp32_pedantic( // forcefully using CUDA cores instead of Tensor
         CUBLAS_COMPUTE_32F_PEDANTIC, CUBLAS_GEMM_DEFAULT);
 }
 
-void cublas_gemm_fp32_tc( // This uses tf32, which is not technically fp32 
+void cublas_gemm_fp32_tc( // TF32 / Tensor Core reference
     cublasHandle_t handle,
     const float* A,
     const float* B,

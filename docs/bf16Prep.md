@@ -2,20 +2,12 @@
 
 ## Preamble: Where We Stand
 
-Current `kernel_master` performance vs cuBLAS `sgemm` (RTX 5070, April 2026):
+The FP32 optimization log now lives in `fp32Optimizations.md`. This document keeps
+the BF16 / tensor-core strategy and the supporting hardware analysis, while the
+old FP32 naming in later sections is retained only as historical context.
 
-| Size | Kernel | % of sgemm | Gap to parity |
-|------|--------|------------|---------------|
-| 32–64 | naive | 146–229% | — (we beat it) |
-| 128–256 | r1y | 48–55% | large, but small matrices |
-| 512 | r2x | 43% | large, but small matrices |
-| 1024 | r2z2 | **67%** | **33% gap** ← primary concern |
-| 2048 | r2z2 | **85.5%** | **15% gap** |
-| 4096 | r2z2 | **98%** | 2% gap — essentially parity |
-
-The 1024 gap (33%) is the most actionable. This document analyses why it exists,
-whether tile tuning can close it, and what the correct strategy is for BF16
-tensor core kernels and TF32.
+Current BF16 baseline vs cuBLAS Tensor Core on RTX 5070 is still far from parity,
+so BF16 and TF32 remain the next major kernel efforts.
 
 ---
 
@@ -285,8 +277,9 @@ Both target GPUs support BF16 tensor cores:
 | RTX 5070 | 12.0 | 5th gen (Blackwell) | ~500–990 TFLOPS | m=16, n=16, k=16 |
 | H100 SXM | 9.0 | 4th gen (Hopper) | 1979 TFLOPS | m=16, n=16, k=16 |
 
-Measured cuBLAS TC at 4096×4096 on RTX 5070: **4.1ms** vs our FP32 r2z2 at
-**6.7ms** → TC is **1.63× faster** than our best FP32 kernel.
+Measured cuBLAS TC at 4096×4096 on RTX 5070: **4.1ms** vs our current FP32
+CUDA-core baseline at **6.7ms** → TC is **1.63× faster** than our best FP32
+kernel.
 
 Theoretical min at 990 TFLOPS: 0.14ms. cuBLAS reaches ~33 TFLOPS effective = ~3%
 of theoretical peak. This sounds low but is typical: tensor core efficiency is
@@ -315,7 +308,8 @@ Consequences:
    and store back to SMEM at output.
 2. **SMEM layout is constrained**: `wmma::load_matrix_sync` expects A in row-major
    and B in col-major (or transposed variants). Storing A transposed in SMEM (as we
-   do in r2z2 for bank-conflict avoidance) is wrong — TC loads expect standard layout.
+    do in the current FP32 CUDA-core baseline for bank-conflict avoidance) is wrong
+    — TC loads expect standard layout.
 3. **Bank conflict strategy changes**: Since the TC load pattern is opaque, use
    **SMEM padding** instead of transposition:
    ```cpp
@@ -337,8 +331,8 @@ Total single-buffer: 16 KB
 Double-buffer: 32 KB  (fits in 48 KB limit)
 ```
 
-With BK=32 (vs BK=16 in r2z2), the MMA inner loop runs 32 K-iterations per
-SMEM tile load, doubling the FLOPs per global memory byte:
+With BK=32 (vs BK=16 in the current FP32 baseline), the MMA inner loop runs 32
+K-iterations per SMEM tile load, doubling the FLOPs per global memory byte:
 ```
 AI_SMEM(BK=16) = 128×128×16×2 / (128×16 + 16×128) / 2 = 64 FLOPs/byte
 AI_SMEM(BK=32) = 128×128×32×2 / (128×32 + 32×128) / 2 = 128 FLOPs/byte
@@ -398,8 +392,8 @@ Total MMA calls per block per K-tile: 4 warps × 16 tiles × 2 steps = 128.
 Each mma_sync: 16×16×16 BF16 = 8192 FLOPs.  
 Total FLOPs per K-tile: 128 × 8192 = 1 048 576 FLOPs.
 
-This is the compute density per block per SMEM load — compare to r2z2's
-128×128×16 = 262144 FLOPs/tile, 4× less. The TC kernel computes 4× more per
+This is the compute density per block per SMEM load — compare to the current
+FP32 baseline's 128×128×16 = 262144 FLOPs/tile, 4× less. The TC kernel computes 4× more per
 global memory byte at equal BK (and 8× more with BK=32).
 
 ### 4.6 BF16 Global Memory Loading
@@ -521,10 +515,11 @@ behaviour.
 ### 5.3 TF32 Global Data Format
 
 Since TF32 uses the same 32-bit storage as FP32, the kernel accepts `const float*`
-inputs identically to r2z2. No data format conversion on the host side. The
-truncation from FP32 → TF32 happens implicitly inside `load_matrix_sync`.
+inputs identically to the current FP32 kernel. No data format conversion on the
+host side. The truncation from FP32 → TF32 happens implicitly inside
+`load_matrix_sync`.
 
-This makes a TF32 kernel a direct drop-in for the current FP32 kernel_master,
+This makes a TF32 kernel a direct drop-in for the current FP32 master path,
 with a precision tradeoff that must be disclosed.
 
 ### 5.4 TF32 SMEM Sizing
@@ -599,13 +594,13 @@ Phase 3: TF32 kernel for FP32 (optional)
 
 ## Appendix: Key Hardware Limits for Kernel Sizing (RTX 5070)
 
-| Resource | Limit | Binding constraint for r2z2 (128t, 32KB) |
+| Resource | Limit | Binding constraint for current FP32 baseline (128t, 32KB) |
 |----------|-------|------------------------------------------|
 | SMEM/SM | 100 KB | 3 blocks/SM → 12 warps/SM (25% occupancy) |
-| SMEM/block (default) | 48 KB | r2z2 uses 32 KB — fits; headroom for BK=32 single-buf |
+| SMEM/block (default) | 48 KB | Current FP32 baseline uses 32 KB — fits; headroom for BK=32 single-buf |
 | Threads/SM | 1536 | 3×128=384 active — well under; not binding |
-| Regs/SM | 65536 | r2z2 uses ~100 regs/thread × 384 = 38 400 — 59% |
-| Warps/SM | 48 | r2z2: 12/48 = 25% — the binding occupancy limit |
+| Regs/SM | 65536 | Current FP32 baseline uses ~100 regs/thread × 384 = 38 400 — 59% |
+| Warps/SM | 48 | Current FP32 baseline: 12/48 = 25% — the binding occupancy limit |
 
 For WMMA BF16 kernel (target: BM=128, BN=128, BK=32, 256t, double-buffer):
 | Resource | Usage | Fits? |

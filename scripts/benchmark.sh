@@ -1,7 +1,7 @@
 #!/bin/bash
-# Build and run GEMM benchmark, then generate plots
+# Build and run GEMM benchmark
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/.."
@@ -17,11 +17,7 @@ cmake --build build --parallel > /dev/null
 
 echo ""
 echo "=== Running benchmark ==="
-"${BUILD_DIR}/cu_x_gemm"
-
-echo ""
-echo "=== Generating plots ==="
-python3 "${SCRIPT_DIR}/plot_results.py" "${RESULTS_DIR}/benchmark_results.csv" -o "${RESULTS_DIR}"
+"${BUILD_DIR}/cu_x_gemm" | tee "${RESULTS_DIR}/benchmark.log"
 
 echo ""
 echo "=== Done ==="

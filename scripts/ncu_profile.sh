@@ -1,10 +1,10 @@
 #!/bin/bash
-# NCU Profiling Script for GEMM Kernels
-# Usage: ./scripts/ncu_profile.sh <variant> <size>
+# NCU profiling helper for the current benchmark binary
+# Usage: ./scripts/ncu_profile.sh <label> <sizes>
 
 set -e
 
-VARIANT=${1:-6}  # Default to r1x2 (variant 6)
+VARIANT=${1:-master}  # Default label for output files
 SIZES=${2:-"1024 2048 4096"}
 OUTPUT_DIR="results/ncu"
 

@@ -13,11 +13,7 @@ add_executable(cu_x_gemm
     src/cublas_gemm.cu
     src/gemm_bf16.cu
     src/gemm_fp32.cu
-    src/gemm_fp32_r2z_128.cu
-    src/gemm_fp32_r2z_512.cu
-    src/gemm_fp32_r2z_1024.cu
-    src/gemm_fp32_r2z_2048.cu
-    src/gemm_fp32_r2z_4096.cu
+    src/gemm_fp32_r2z.cu
     src/gemm_fp32_master.cu
 )
 
@@ -28,19 +24,5 @@ target_link_libraries(cu_x_gemm PRIVATE
 )
 
 target_compile_options(cu_x_gemm PRIVATE
-    $<$<COMPILE_LANGUAGE:CUDA>:-O3>
-)
-
-# R3X Tuner executable
-add_executable(cu_x_gemm_r3x_tuner
-    src/gemm_fp32_r3x_tuner.cu
-)
-
-target_link_libraries(cu_x_gemm_r3x_tuner PRIVATE
-    CUDA::cublas
-    CUDA::cudart
-)
-
-target_compile_options(cu_x_gemm_r3x_tuner PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:-O3>
 )
