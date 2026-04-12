@@ -15,13 +15,36 @@ This folder contains kernels that have been archived due to poor performance or 
 | gemm_fp32_r1d.cu | 45 | 14% | 64 KB | 43 | Identical to r1c |
 | gemm_fp32_r1x2.cu | 43 | 15% | 64 KB | 43 | Identical to r1x |
 
+## Recently Archived (March 2026)
+
+### gemm_fp32_r1x.cu (archived)
+- **Variant**: v2
+- **Status**: Never used
+- **Reason**: Replaced by r1y with same performance but better implementation
+- **Config**: BM=128, BN=64, BK=64, 2D blocks
+- **Lessons**: Superseded before ever being benchmarked
+
+### gemm_fp32_r2y.cu (archived)
+- **Variant**: v5
+- **Status**: Buggy K-loop (started at BK instead of 0)
+- **Reason**: Three bugs in double-buffering logic; fixed in r2z.cu
+- **Config**: BM=128, BN=128, BK=16, warp tiling
+- **Key bugs fixed in r2z**:
+  1. K-loop started at BK instead of 0 — skipped first KB
+  2. Load/compute ordering inverted — overwrote SMEM before computing
+  3. Redundant post-loop compute block — double computation
+- **Reference**: gemm_fp32_r2z.cu shows the corrected version
+
+---
+
 ## Active Kernels (in src/)
 
 | Kernel | Time (ms) | vs CuBLAS | Block Type |
 |--------|-----------|-----------|------------|
 | gemm_fp32.cu | 67 | 10% | Naive baseline |
-| gemm_fp32_r1x.cu | 43 | 15% | 2D blocks |
-| gemm_fp32_r1y.cu | **27** | **24%** | 1D blocks (BEST) |
+| gemm_fp32_r1y.cu | 27 | 24% | 1D blocks |
+| gemm_fp32_r2x.cu | 8 | 81% | float4 + A-transpose |
+| gemm_fp32_r2z2.cu | 6.7 | **98%** | double-buffer + cp.async (BEST) |
 
 ## Key Issues & Lessons Learned
 

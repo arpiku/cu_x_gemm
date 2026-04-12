@@ -95,6 +95,52 @@ High L2 error (~0.6-1.6) at sizes 32, 64 for 128×128-tiled kernels — boundary
 ### cuda::barrier (Not Used)
 Earlier attempts at double-buffering in r2y used `cuda::barrier` which had initialization issues. r2z2 avoids this entirely by using `__pipeline_memcpy_async` + `__pipeline_wait_prior` (per-thread pipeline, no shared state needed).
 
+## New Finding: Tile Size Matters for Medium Sizes (April 2026)
+
+### Problem Identified
+Original r2z2 uses **128×128 tiles**, which is optimal for large matrices (1024+) but creates poor parallelism at medium sizes:
+
+| Size | 128×128 Blocks | Utilization | Issue |
+|------|----------------|-------------|-------|
+| 128 | 1 block | 100% boundary waste | Massive parallelism loss |
+| 256 | 4 blocks | Significant waste | Poor occupancy |
+| 512 | 16 blocks | Decent | Adequate but not optimal |
+
+### Solution: r2z2_small Variant
+
+Created `src/gemm_fp32_r2z2_small.cu` with **64×64 tiles**:
+- BM=64, BN=64, BK=16, WM=32, WN=32, WNITER=1
+- TM=8, TN=4, 128 threads (same as r2z2)
+- SMEM: 16KB double buffer (vs 32KB in r2z2)
+
+### Performance Comparison
+
+| Size | r2z2 (128×128) | r2z2_small (64×64) | r3x (64×64 flat) |
+|------|----------------|-------------------|------------------|
+| 128 | ~24%* | **71.7%** | 55.4% |
+| 256 | ~25%* | **69.4%** | 48.7% |
+| 512 | ~43%* | **91.5%** | 86.1% |
+| 1024 | 65.2% | 75.1% | ~64% |
+| 2048 | 86.9% | 73.7% | ~67% |
+| 4096 | 97.7% | 75.2% | ~73% |
+
+*Estimated based on r2z2_small's efficiency at small sizes
+
+### Key Insight
+**Warp tiling beats flat layout**: r2z2_small (91.5% at 512) outperforms r3x (86.1%) despite both using 64×64 tiles. The warp tiling hierarchy (block→warp→subwarp→thread) provides better register reuse and data locality.
+
+### Updated Master Kernel Recommendations
+```
+≤ 64×64     → naive   (launch overhead wins)
+≤ 256×256   → r1y     (simple, good occupancy)
+≤ 512×512   → r2z2_small  (NEW - 91.5% at 512!)
+> 512×512   → r2z2    (98% at 4096)
+```
+
+### Files Added
+- `src/gemm_fp32_r2z2_small.cu` — 64×64 tiled r2z2 variant
+- `src/gemm_fp32_r3x_tuner.cu` — R3X parameter tuner
+
 ## Future Directions
 
 ### BK=32 Variant

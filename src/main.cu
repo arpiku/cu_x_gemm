@@ -18,11 +18,13 @@
 //   6 = master  (gemm_fp32_master.cu)        - auto-select by M*N threshold
 //   7 = r2z     (gemm_fp32_r2z.cu)          - r2y with corrected K-loop
 //   8 = r2z2    (gemm_fp32_r2z2.cu)         - r2z + double buffer + cp.async B
+//   9 = r3x     (gemm_fp32_r3x.cu)          - 64x64 tiles, double buffer
+//   10 = r2z2_small (gemm_fp32_r2z2_small.cu) - 64x64 r2z2 for small sizes
 //
 // SCRATCH VARIANTS (archived in scratch/):
 //   See scratch/SCRATCH_INDEX.md to re-enable
 //
-#define FP32_VARIANT 6
+#define FP32_VARIANT 10
 
 constexpr bool TEST_ALL_VARIANTS = true;
 
@@ -107,6 +109,22 @@ extern const char* get_variant_desc_fp32_r2z2();
 #define launch_gemm_fp32 launch_gemm_fp32_r2z2
 #define get_variant_id_fp32 get_variant_id_fp32_r2z2
 #define get_variant_desc_fp32 get_variant_desc_fp32_r2z2
+#elif FP32_VARIANT == 9
+extern void launch_gemm_fp32_r3x(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t);
+extern const char* get_variant_id_fp32_r3x();
+extern const char* get_variant_desc_fp32_r3x();
+#define launch_gemm_fp32 launch_gemm_fp32_r3x
+#define get_variant_id_fp32 get_variant_id_fp32_r3x
+#define get_variant_desc_fp32 get_variant_desc_fp32_r3x
+#elif FP32_VARIANT == 10
+extern void launch_gemm_fp32_r2z2_small(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t);
+extern const char* get_variant_id_fp32_r2z2_small();
+extern const char* get_variant_desc_fp32_r2z2_small();
+#define launch_gemm_fp32 launch_gemm_fp32_r2z2_small
+#define get_variant_id_fp32 get_variant_id_fp32_r2z2_small
+#define get_variant_desc_fp32 get_variant_desc_fp32_r2z2_small
 #endif
 
 extern void cublas_gemm_bf16(cublasHandle_t, const __nv_bfloat16*, const __nv_bfloat16*, float*,
@@ -376,6 +394,10 @@ int main(int argc, char** argv) {
     printf("# FP32_VARIANT: r2z (corrected K-loop, single buffer)\n\n");
 #elif FP32_VARIANT == 8
     printf("# FP32_VARIANT: r2z2 (double buffer + cp.async B)\n\n");
+#elif FP32_VARIANT == 9
+    printf("# FP32_VARIANT: r3x (64x64 tiles, 2 thread configs)\n\n");
+#elif FP32_VARIANT == 10
+    printf("# FP32_VARIANT: r2z2_small (64x64 r2z2 for small sizes)\n\n");
 #else
     printf("# FP32_VARIANT: unknown (check config)\n\n");
 #endif
