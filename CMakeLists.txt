@@ -14,6 +14,8 @@ add_executable(cu_x_gemm
     src/gemm_bf16.cu
     src/gemm_fp32.cu
     src/gemm_fp32_r2z.cu
+    src/gemm_fp32_r2z_tc0.cu
+    src/gemm_fp32_r2z_tc1.cu
     src/gemm_fp32_master.cu
 )
 
