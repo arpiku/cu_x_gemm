@@ -2,6 +2,8 @@
 #include <cuda_runtime.h>
 #include <mma.h>
 
+#include "target_arch.h"
+
 // tc1: identical double-buffer + cp.async structure as tc0
 // sole delta: wmma::mma_sync replaced with inline PTX wmma.mma.sync
 
@@ -42,12 +44,25 @@ struct LargeTC1Config {
 };
 
 enum class SizeClass { Small, Medium, Large };
-constexpr int SMALL_MAX_ELEMENTS  = 65536;
-constexpr int MEDIUM_MAX_ELEMENTS = 1048576;
+struct SizeThresholds {
+    int small_max;
+    int medium_max;
+};
 
-constexpr SizeClass select_size_class(int e) {
-    if (e <= SMALL_MAX_ELEMENTS)  return SizeClass::Small;
-    if (e <= MEDIUM_MAX_ELEMENTS) return SizeClass::Medium;
+constexpr SizeThresholds select_size_thresholds(TargetArch arch) {
+    switch (arch) {
+        case TargetArch::H100:
+            return {262144, 4194304};
+        case TargetArch::RTX5070:
+            return {65536, 1048576};
+    }
+    return {65536, 1048576};
+}
+
+constexpr SizeClass select_size_class(int e, TargetArch arch) {
+    const auto thresholds = select_size_thresholds(arch);
+    if (e <= thresholds.small_max)  return SizeClass::Small;
+    if (e <= thresholds.medium_max) return SizeClass::Medium;
     return SizeClass::Large;
 }
 
@@ -267,8 +282,10 @@ template <typename Config>
 void launch_selected_tc1(
     const float* d_A, const float* d_B, float* d_C,
     int M, int N, int K, float alpha, float beta, cudaStream_t stream,
+    TargetArch arch,
     const char** sel)
 {
+    (void)arch;
     if (sel) *sel = Config::ID;
     dim3 grid((N + Config::BN - 1) / Config::BN, (M + Config::BM - 1) / Config::BM);
     gemm_fp32_r2z_tc1_kernel<Config>
@@ -288,32 +305,32 @@ constexpr const char* const TC1_VARIANT_DESC = "tf32_cpasync_doublebuf_ptx_mma_p
 void launch_gemm_fp32_r2z_tc1_debug(
     const float* d_A, const float* d_B, float* d_C,
     int M, int N, int K, float alpha, float beta,
-    cudaStream_t stream, const char** sel)
+    cudaStream_t stream, TargetArch arch, const char** sel)
 {
     if (M < SmallTC1Config::BM || N < SmallTC1Config::BN) {
         if (sel) *sel = "naive_fallback";
         launch_gemm_fp32_naive(d_A, d_B, d_C, M, N, K, alpha, beta, stream);
         return;
     }
-    switch (select_size_class(M * N)) {
+    switch (select_size_class(M * N, arch)) {
         case SizeClass::Small:
             launch_selected_tc1<SmallTC1Config>(
-                d_A, d_B, d_C, M, N, K, alpha, beta, stream, sel); break;
+                d_A, d_B, d_C, M, N, K, alpha, beta, stream, arch, sel); break;
         case SizeClass::Medium:
             launch_selected_tc1<MediumTC1Config>(
-                d_A, d_B, d_C, M, N, K, alpha, beta, stream, sel); break;
+                d_A, d_B, d_C, M, N, K, alpha, beta, stream, arch, sel); break;
         case SizeClass::Large:
             launch_selected_tc1<LargeTC1Config>(
-                d_A, d_B, d_C, M, N, K, alpha, beta, stream, sel); break;
+                d_A, d_B, d_C, M, N, K, alpha, beta, stream, arch, sel); break;
     }
 }
 
 void launch_gemm_fp32_r2z_tc1(
     const float* d_A, const float* d_B, float* d_C,
-    int M, int N, int K, float alpha, float beta, cudaStream_t stream)
+    int M, int N, int K, float alpha, float beta, cudaStream_t stream, TargetArch arch)
 {
     launch_gemm_fp32_r2z_tc1_debug(
-        d_A, d_B, d_C, M, N, K, alpha, beta, stream, nullptr);
+        d_A, d_B, d_C, M, N, K, alpha, beta, stream, arch, nullptr);
 }
 
 const char* get_variant_id_fp32_r2z_tc1()   { return TC1_VARIANT_ID; }

@@ -1,6 +1,8 @@
 #include <cuda_pipeline.h>
 #include <cuda_runtime.h>
 
+#include "target_arch.h"
+
 namespace {
 
 struct SmallConfig {
@@ -48,14 +50,27 @@ enum class SizeClass {
     Large,
 };
 
-constexpr int SMALL_MAX_ELEMENTS = 65536;      // 256x256
-constexpr int MEDIUM_MAX_ELEMENTS = 1048576;   // 1024x1024
+struct SizeThresholds {
+    int small_max;
+    int medium_max;
+};
 
-constexpr SizeClass select_size_class(int elements) {
-    if (elements <= SMALL_MAX_ELEMENTS) {
+constexpr SizeThresholds select_size_thresholds(TargetArch arch) {
+    switch (arch) {
+        case TargetArch::H100:
+            return {262144, 4194304};
+        case TargetArch::RTX5070:
+            return {65536, 1048576};
+    }
+    return {65536, 1048576};
+}
+
+constexpr SizeClass select_size_class(int elements, TargetArch arch) {
+    const auto thresholds = select_size_thresholds(arch);
+    if (elements <= thresholds.small_max) {
         return SizeClass::Small;
     }
-    if (elements <= MEDIUM_MAX_ELEMENTS) {
+    if (elements <= thresholds.medium_max) {
         return SizeClass::Medium;
     }
     return SizeClass::Large;
@@ -291,6 +306,7 @@ void launch_gemm_fp32_r2z_debug(
     int M, int N, int K,
     float alpha, float beta,
     cudaStream_t stream,
+    TargetArch arch,
     const char** selected_variant_out);
 
 void launch_gemm_fp32_r2z(
@@ -299,9 +315,10 @@ void launch_gemm_fp32_r2z(
     float*       d_C,
     int M, int N, int K,
     float alpha, float beta,
-    cudaStream_t stream)
+    cudaStream_t stream,
+    TargetArch arch)
 {
-    launch_gemm_fp32_r2z_debug(d_A, d_B, d_C, M, N, K, alpha, beta, stream, nullptr);
+    launch_gemm_fp32_r2z_debug(d_A, d_B, d_C, M, N, K, alpha, beta, stream, arch, nullptr);
 }
 
 void launch_gemm_fp32_r2z_debug(
@@ -311,13 +328,14 @@ void launch_gemm_fp32_r2z_debug(
     int M, int N, int K,
     float alpha, float beta,
     cudaStream_t stream,
+    TargetArch arch,
     const char** selected_variant_out)
 {
     const int elements = M * N;
-    switch (select_size_class(elements)) {
+    switch (select_size_class(elements, arch)) {
         case SizeClass::Small:
             launch_selected_r2z<SmallConfig>(d_A, d_B, d_C, M, N, K, alpha, beta, stream,
-                                            selected_variant_out);
+                                             selected_variant_out);
             break;
         case SizeClass::Medium:
             launch_selected_r2z<MediumConfig>(d_A, d_B, d_C, M, N, K, alpha, beta, stream,

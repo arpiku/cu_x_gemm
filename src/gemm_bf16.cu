@@ -3,6 +3,8 @@
 #include <cuda_runtime.h>
 #include <mma.h>
 
+#include "target_arch.h"
+
 // gemm_bf16_r1: BF16 input -> FP32 accumulation
 // WMMA m16n16k16, cp.async double-buffer, padded SMEM, size-tuned configs.
 // Replaces the naive r0 kernel.
@@ -49,6 +51,21 @@ struct LargeBF16Config {
 
 constexpr int SMALL_MAX_ELEMENTS  = 65536;    // <= 256×256
 constexpr int MEDIUM_MAX_ELEMENTS = 1048576;  // <= 1024×1024
+
+struct SizeThresholds {
+    int small_max;
+    int medium_max;
+};
+
+constexpr SizeThresholds select_size_thresholds(TargetArch arch) {
+    switch (arch) {
+        case TargetArch::H100:
+            return {1048576, 4194304};
+        case TargetArch::RTX5070:
+            return {SMALL_MAX_ELEMENTS, MEDIUM_MAX_ELEMENTS};
+    }
+    return {SMALL_MAX_ELEMENTS, MEDIUM_MAX_ELEMENTS};
+}
 
 // ── Kernel ────────────────────────────────────────────────────────────────────
 
@@ -274,7 +291,8 @@ void launch_gemm_bf16(
     float*               d_C,
     int M, int N, int K,
     float alpha, float beta,
-    cudaStream_t stream)
+    cudaStream_t stream,
+    TargetArch arch)
 {
     // WMMA kernel requires M >= BM=64 and N >= BN=64; fall back for tiny sizes.
     if (M < SmallBF16Config::BM || N < SmallBF16Config::BN) {
@@ -286,9 +304,10 @@ void launch_gemm_bf16(
     }
 
     const int e = M * N;
-    if (e <= SMALL_MAX_ELEMENTS)
+    const auto thresholds = select_size_thresholds(arch);
+    if (e <= thresholds.small_max)
         launch_selected_bf16<SmallBF16Config>(d_A, d_B, d_C, M, N, K, alpha, beta, stream);
-    else if (e <= MEDIUM_MAX_ELEMENTS)
+    else if (e <= thresholds.medium_max)
         launch_selected_bf16<MediumBF16Config>(d_A, d_B, d_C, M, N, K, alpha, beta, stream);
     else
         launch_selected_bf16<LargeBF16Config>(d_A, d_B, d_C, M, N, K, alpha, beta, stream);

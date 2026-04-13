@@ -6,7 +6,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <filesystem>
 #include <string>
+
+#include "target_arch.h"
 
 // ============ BENCHMARK CONFIG ============
 constexpr int DIMENSIONS[] = {32, 64, 128, 256, 512, 1024, 2048, 4096};
@@ -15,21 +18,20 @@ constexpr int NUM_DIMS = sizeof(DIMENSIONS) / sizeof(DIMENSIONS[0]);
 constexpr int WARMUP_ITERATIONS = 10;
 constexpr int MEASURE_ITERATIONS = 50;
 
-constexpr const char* CSV_PATH = "results/benchmark_results.csv";
 // ==========================================
 
 extern void launch_gemm_bf16(const __nv_bfloat16*, const __nv_bfloat16*, float*,
-    int, int, int, float, float, cudaStream_t);
+    int, int, int, float, float, cudaStream_t, TargetArch);
 extern const char* get_variant_id_bf16();
 extern const char* get_variant_desc_bf16();
 
 extern void launch_gemm_fp32_master_debug(const float*, const float*, float*,
-    int, int, int, float, float, cudaStream_t, const char**);
+    int, int, int, float, float, cudaStream_t, TargetArch, const char**);
 extern const char* get_variant_id_fp32_master();
 extern const char* get_variant_desc_fp32_master();
 
 extern void launch_gemm_fp32_r2z_tc1_debug(const float*, const float*, float*,
-    int, int, int, float, float, cudaStream_t, const char**);
+    int, int, int, float, float, cudaStream_t, TargetArch, const char**);
 extern const char* get_variant_id_fp32_r2z_tc1();
 extern const char* get_variant_desc_fp32_r2z_tc1();
 
@@ -94,7 +96,23 @@ struct FP32TCResult {
 static std::array<const char*, NUM_DIMS> selected_kernel_names{};
 static std::array<const char*, NUM_DIMS> selected_tc_kernel_names{};
 
-static void benchmark_bf16(int dim, cublasHandle_t handle, cudaStream_t stream, BF16Result* out) {
+static TargetArch detect_target_arch_from_device(const cudaDeviceProp& prop) {
+    if (prop.major == 9) return TargetArch::H100;
+    if (prop.major == 12) return TargetArch::RTX5070;
+    printf("Unsupported SM %d.%d; defaulting to RTX5070\n", prop.major, prop.minor);
+    return TargetArch::RTX5070;
+}
+
+static std::string benchmark_output_dir(TargetArch arch) {
+    return std::string("results/") + target_arch_name(arch);
+}
+
+static std::string benchmark_csv_path(TargetArch arch) {
+    return benchmark_output_dir(arch) + "/benchmark_results.csv";
+}
+
+static void benchmark_bf16(int dim, cublasHandle_t handle, cudaStream_t stream,
+                           TargetArch arch, BF16Result* out) {
     int N = dim;
     size_t bytes_A = N * N * sizeof(__nv_bfloat16);
     size_t bytes_C = N * N * sizeof(float);
@@ -121,12 +139,12 @@ static void benchmark_bf16(int dim, cublasHandle_t handle, cudaStream_t stream, 
     cudaEventCreate(&stop);
 
     for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        launch_gemm_bf16(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
+        launch_gemm_bf16(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch);
     cudaStreamSynchronize(stream);
 
     cudaEventRecord(start, stream);
     for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-        launch_gemm_bf16(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream);
+        launch_gemm_bf16(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch);
     cudaEventRecord(stop, stream);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&out->custom_ms, start, stop);
@@ -162,7 +180,8 @@ static void benchmark_bf16(int dim, cublasHandle_t handle, cudaStream_t stream, 
     free(h_A); free(h_B); free(h_C); free(h_C_ref);
 }
 
-static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream, FP32Result* out) {
+static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream,
+                           TargetArch arch, FP32Result* out) {
     int N = dim;
     size_t bytes = N * N * sizeof(float);
 
@@ -188,12 +207,14 @@ static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream, 
 
     const char* selected_kernel = nullptr;
     for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        launch_gemm_fp32_master_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, &selected_kernel);
+        launch_gemm_fp32_master_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch,
+                                       &selected_kernel);
     cudaStreamSynchronize(stream);
 
     cudaEventRecord(start, stream);
     for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-        launch_gemm_fp32_master_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, &selected_kernel);
+        launch_gemm_fp32_master_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch,
+                                       &selected_kernel);
     cudaEventRecord(stop, stream);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&out->custom_ms, start, stop);
@@ -244,7 +265,7 @@ static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream, 
 }
 
 static void benchmark_fp32_tc(int dim, cublasHandle_t handle, cudaStream_t stream,
-                              FP32TCResult* out) {
+                              TargetArch arch, FP32TCResult* out) {
     int N = dim;
     size_t bytes = N * N * sizeof(float);
 
@@ -270,13 +291,13 @@ static void benchmark_fp32_tc(int dim, cublasHandle_t handle, cudaStream_t strea
 
     const char* selected_kernel = nullptr;
     for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        launch_gemm_fp32_r2z_tc1_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream,
+        launch_gemm_fp32_r2z_tc1_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch,
                                         &selected_kernel);
     cudaStreamSynchronize(stream);
 
     cudaEventRecord(start, stream);
     for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-        launch_gemm_fp32_r2z_tc1_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream,
+        launch_gemm_fp32_r2z_tc1_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch,
                                         &selected_kernel);
     cudaEventRecord(stop, stream);
     cudaEventSynchronize(stop);
@@ -324,33 +345,40 @@ static void benchmark_fp32_tc(int dim, cublasHandle_t handle, cudaStream_t strea
     free(h_A); free(h_B); free(h_C); free(h_C_ref);
 }
 
-static void write_csv(const std::string& path,
-                      const int* dims, int num_dims,
-                      const BF16Result* bf16_results,
-                      const FP32Result* fp32_results,
-                      const FP32TCResult* fp32_tc_results,
-                      const char* variant_bf16, const char* desc_bf16,
-                      const char* variant_fp32, const char* desc_fp32,
-                      const char* variant_tc, const char* desc_tc) {
+static void write_csv_with_arch(const std::string& path,
+                                const int* dims, int num_dims,
+                                const BF16Result* bf16_results,
+                                const FP32Result* fp32_results,
+                                const FP32TCResult* fp32_tc_results,
+                                const char* target_arch,
+                                const char* gpu_name,
+                                int sm_major,
+                                int sm_minor,
+                                const char* variant_bf16, const char* desc_bf16,
+                                const char* variant_fp32, const char* desc_fp32,
+                                const char* variant_tc, const char* desc_tc) {
     std::ofstream f(path);
-    f << "dim,dtype,variant,desc,custom_ms,cublas_32f_ms,cublas_tc_ms,"
-       << "sgemm_ms,cuda_ms,pedantic_ms,tc_ms,l2_error\n";
+    f << "dim,dtype,target_arch,gpu_name,sm,variant,desc,custom_ms,cublas_32f_ms,cublas_tc_ms,"
+      << "sgemm_ms,cuda_ms,pedantic_ms,tc_ms,l2_error\n";
     for (int i = 0; i < num_dims; ++i) {
         const auto& r = bf16_results[i];
-        f << dims[i] << ",BF16," << variant_bf16 << "," << desc_bf16 << ","
-          << r.custom_ms << "," << r.cublas_ms << "," << r.cublas_tc_ms << ",,,,"
+        f << dims[i] << ",BF16," << target_arch << "," << gpu_name << ","
+          << sm_major << "." << sm_minor << "," << variant_bf16 << "," << desc_bf16 << ","
+          << r.custom_ms << "," << r.cublas_ms << "," << r.cublas_tc_ms << ",,,"
           << r.l2_error << "\n";
     }
     for (int i = 0; i < num_dims; ++i) {
         const auto& r = fp32_results[i];
-        f << dims[i] << ",FP32," << variant_fp32 << "," << desc_fp32 << ","
+        f << dims[i] << ",FP32," << target_arch << "," << gpu_name << ","
+          << sm_major << "." << sm_minor << "," << variant_fp32 << "," << desc_fp32 << ","
           << r.custom_ms << ",,,"
           << r.sgemm_ms << "," << r.cuda_ms << "," << r.pedantic_ms << "," << r.tc_ms << ","
           << r.l2_error << "\n";
     }
     for (int i = 0; i < num_dims; ++i) {
         const auto& r = fp32_tc_results[i];
-        f << dims[i] << ",FP32-TC," << variant_tc << "," << desc_tc << ","
+        f << dims[i] << ",FP32-TC," << target_arch << "," << gpu_name << ","
+          << sm_major << "." << sm_minor << "," << variant_tc << "," << desc_tc << ","
           << r.custom_ms << ",,,,,," << r.tc_ms << "," << r.l2_error << "\n";
     }
 }
@@ -358,8 +386,21 @@ static void write_csv(const std::string& path,
 int main(int argc, char** argv) {
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
+    TargetArch arch = detect_target_arch_from_device(prop);
+    for (int i = 1; i < argc; ++i) {
+        if (!parse_target_arch_flag(argv[i], &arch)) {
+            printf("Invalid arg: %s\n", argv[i]);
+            printf("Use -h100 or -rtx5070\n");
+            return 1;
+        }
+    }
     printf("# GPU: %s (SM %d.%d)\n", prop.name, prop.major, prop.minor);
+    printf("# Target arch: %s\n", target_arch_name(arch));
     printf("# FP32 launcher: master (naive + size-tuned r2z)\n\n");
+
+    const std::string out_dir = benchmark_output_dir(arch);
+    std::filesystem::create_directories(out_dir);
+    const std::string csv_path = benchmark_csv_path(arch);
 
     cublasHandle_t handle;
     cublasCreate(&handle);
@@ -378,26 +419,26 @@ int main(int argc, char** argv) {
     FP32TCResult fp32_tc_results[NUM_DIMS];
 
     printf("=== BF16 ===\n");
-    printf("%-6s %-4s %-8s %10s %10s %10s %7s %10s\n",
-        "Dim", "Ver", "Desc", "Custom(ms)", "CuBLAS(ms)", "CuBLAS-TC(ms)", "Ratio%", "L2_Error");
+    printf("%-6s %-12s %10s %10s %12s %7s %10s\n",
+        "Dim", "Selected", "Custom(ms)", "CuBLAS(ms)", "CuBLAS-TC(ms)", "Ratio%", "L2_Error");
     printf("%s\n", std::string(78, '-').c_str());
 
     for (int d = 0; d < NUM_DIMS; ++d) {
         int dim = DIMENSIONS[d];
-        benchmark_bf16(dim, handle, stream, &bf16_results[d]);
+        benchmark_bf16(dim, handle, stream, arch, &bf16_results[d]);
         const auto& r = bf16_results[d];
         float ratio = (r.cublas_ms / r.custom_ms) * 100.0f;
-        printf("%-6d %-4s %-8s %10.4f %10.4f %10.4f %6.1f%% %10.2e\n",
-            dim, variant_bf16, desc_bf16, r.custom_ms, r.cublas_ms, r.cublas_tc_ms, ratio, r.l2_error);
+        printf("%-6d %-12s %10.4f %10.4f %12.4f %6.1f%% %10.2e\n",
+            dim, variant_bf16, r.custom_ms, r.cublas_ms, r.cublas_tc_ms, ratio, r.l2_error);
     }
 
     for (int d = 0; d < NUM_DIMS; ++d) {
         int dim = DIMENSIONS[d];
-        benchmark_fp32(dim, handle, stream, &fp32_results[d]);
+        benchmark_fp32(dim, handle, stream, arch, &fp32_results[d]);
     }
     for (int d = 0; d < NUM_DIMS; ++d) {
         int dim = DIMENSIONS[d];
-        benchmark_fp32_tc(dim, handle, stream, &fp32_tc_results[d]);
+        benchmark_fp32_tc(dim, handle, stream, arch, &fp32_tc_results[d]);
     }
 
     printf("\n=== FP32 (CU Cores) ===\n");
@@ -433,9 +474,10 @@ int main(int argc, char** argv) {
             dim, sel, r.custom_ms, r.tc_ms, r_tc, r.l2_error);
     }
 
-    write_csv(CSV_PATH, DIMENSIONS, NUM_DIMS, bf16_results, fp32_results, fp32_tc_results,
-              variant_bf16, desc_bf16, variant_fp32, desc_fp32, variant_tc, desc_tc);
-    printf("\n# CSV written to %s\n", CSV_PATH);
+    write_csv_with_arch(csv_path, DIMENSIONS, NUM_DIMS, bf16_results, fp32_results, fp32_tc_results,
+                        target_arch_name(arch), prop.name, prop.major, prop.minor,
+                        variant_bf16, desc_bf16, variant_fp32, desc_fp32, variant_tc, desc_tc);
+    printf("\n# CSV written to %s\n", csv_path.c_str());
 
     cublasDestroy(handle);
     cudaStreamDestroy(stream);
