@@ -1,5 +1,7 @@
 build/
 results/
+ptx/
+ptx.archive/
 *.csv
 *.png
 *.log
