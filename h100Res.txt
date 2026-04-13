@@ -1,0 +1,42 @@
+# GPU: NVIDIA H100 80GB HBM3 (SM 9.0)
+# FP32 launcher: master (naive + size-tuned r2z)
+
+=== BF16 ===
+Dim    Ver  Desc     Custom(ms) CuBLAS(ms) CuBLAS-TC(ms)  Ratio%   L2_Error
+------------------------------------------------------------------------------
+32     r1_bf16 bf16_wmma_m16n16k16_cpasync_doublebuf_padsmem     0.0037     0.0049     0.0050  132.2%   4.19e-08
+64     r1_bf16 bf16_wmma_m16n16k16_cpasync_doublebuf_padsmem     0.0035     0.0049     0.0050  139.4%   0.00e+00
+128    r1_bf16 bf16_wmma_m16n16k16_cpasync_doublebuf_padsmem     0.0048     0.0049     0.0049  102.5%   0.00e+00
+256    r1_bf16 bf16_wmma_m16n16k16_cpasync_doublebuf_padsmem     0.0074     0.0050     0.0050   67.8%   0.00e+00
+512    r1_bf16 bf16_wmma_m16n16k16_cpasync_doublebuf_padsmem     0.0198     0.0051     0.0050   25.9%   0.00e+00
+1024   r1_bf16 bf16_wmma_m16n16k16_cpasync_doublebuf_padsmem     0.0363     0.0073     0.0073   20.1%   0.00e+00
+2048   r1_bf16 bf16_wmma_m16n16k16_cpasync_doublebuf_padsmem     0.1029     0.0274     0.0274   26.6%   0.00e+00
+4096   r1_bf16 bf16_wmma_m16n16k16_cpasync_doublebuf_padsmem     0.7746     0.1782     0.1784   23.0%   0.00e+00
+
+=== FP32 (CU Cores) ===
+# Primary reference: cuBLAS pedantic (pure FP32, CUDA cores)
+Dim    Selected     Custom(ms) Pedantic(ms)   Ratio%     L2_Err
+--------------------------------------------------------------------------
+32     naive            0.0046       0.0070   151.5%   2.66e-04
+64     naive            0.0072       0.0055    76.4%   2.65e-04
+128    r2z_small        0.0092       0.0056    61.2%   2.59e-04
+256    r2z_small        0.0148       0.0089    60.5%   2.61e-04
+512    r2z_medium       0.0287       0.0150    52.1%   2.61e-04
+1024   r2z_medium       0.0786       0.0565    71.9%   2.61e-04
+2048   r2z_large        0.4865       0.3385    69.6%   2.61e-04
+4096   r2z_large        3.3666       2.6320    78.2%   2.61e-04
+
+=== FP32 (TF32 / Tensor Cores) ===
+# Custom kernel: TF32 WMMA/PTX (r2z_tc1); reference: cuBLAS COMPUTE_32F_FAST_TF32
+Dim    Selected     Custom(ms)   TF32(ms)   Ratio%     L2_Err
+------------------------------------------------------------------------
+32     naive_fallback     0.0047     0.0063   134.8%   0.00e+00
+64     tc1_small        0.0039     0.0067   172.1%   6.94e-04
+128    tc1_small        0.0051     0.0047    92.0%   6.89e-04
+256    tc1_small        0.0075     0.0058    78.0%   6.88e-04
+512    tc1_medium       0.0342     0.0081    23.7%   6.88e-04
+1024   tc1_medium       0.0610     0.0153    25.1%   6.88e-04
+2048   tc1_large        0.2104     0.0493    23.4%   6.93e-04
+4096   tc1_large        1.5564     0.3378    21.7%   7.00e-04
+
+# CSV written to results/benchmark_results.csv
