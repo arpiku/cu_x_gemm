@@ -58,7 +58,10 @@ struct SizeThresholds {
 constexpr SizeThresholds select_size_thresholds(TargetArch arch) {
     switch (arch) {
         case TargetArch::H100:
-            return {262144, 4194304};
+            // SmallConfig (BK=32, 64×64) outperforms MediumConfig (BK=16, 64×64)
+            // for all mid-range sizes. Skip MediumConfig on H100: use SmallConfig
+            // up through 2048×2048, then LargeConfig (128×128) for 4096×4096+.
+            return {4194304, 4194304};
         case TargetArch::RTX5070:
             return {65536, 1048576};
     }

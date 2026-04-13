@@ -49,6 +49,31 @@ struct LargeBF16Config {
 
 };
 
+// ── H100-specific configs (BK=32 for fewer sync cycles, better pipeline overlap) ─
+
+// For sizes up to 2048×2048: 64×64 tile keeps block count high on H100's 132 SMs.
+// BK=32 → FRAGS_K=2, halves the number of __syncthreads() vs BK=16.
+struct H100SmallBF16Config {
+    static constexpr int BM = 64;
+    static constexpr int BN = 64;
+    static constexpr int BK = 32;
+    static constexpr int WM = 32;
+    static constexpr int WN = 32;
+    static constexpr int NUM_THREADS = 128;   // 4 warps
+};
+
+// For 4096×4096+: 128×128 tile, 8 warps, BK=32.
+// FRAGS_M=4, FRAGS_N=4 → 32 WMMA ops per warp per BK stage vs 8 for LargeBF16Config.
+// Grid: 32×32=1024 blocks → ~7.7 blocks/SM → ~100% thread occupancy at 256 threads/block.
+struct H100LargeBF16Config {
+    static constexpr int BM = 128;
+    static constexpr int BN = 128;
+    static constexpr int BK = 32;
+    static constexpr int WM = 64;
+    static constexpr int WN = 64;
+    static constexpr int NUM_THREADS = 256;   // 8 warps
+};
+
 constexpr int SMALL_MAX_ELEMENTS  = 65536;    // <= 256×256
 constexpr int MEDIUM_MAX_ELEMENTS = 1048576;  // <= 1024×1024
 
@@ -294,8 +319,8 @@ void launch_gemm_bf16(
     cudaStream_t stream,
     TargetArch arch)
 {
-    // WMMA kernel requires M >= BM=64 and N >= BN=64; fall back for tiny sizes.
-    if (M < SmallBF16Config::BM || N < SmallBF16Config::BN) {
+    // WMMA kernel requires M >= 64 and N >= 64; fall back for tiny sizes.
+    if (M < 64 || N < 64) {
         constexpr int TILE = 16;
         dim3 grid((N + TILE - 1) / TILE, (M + TILE - 1) / TILE);
         gemm_bf16_naive_kernel<TILE>
@@ -304,6 +329,20 @@ void launch_gemm_bf16(
     }
 
     const int e = M * N;
+
+    if (arch == TargetArch::H100) {
+        // H100-specific dispatch: BK=32 configs halve sync overhead vs BK=16.
+        // SmallBF16Config (64×64 tile) keeps block count high for mid-range sizes,
+        // preventing SM underutilization on H100's 132 SMs.
+        // Threshold: 4096×4096 = 16777216 > 4194304 → switches to LargeConfig.
+        if (e <= 4194304)  // up to 2048×2048
+            launch_selected_bf16<H100SmallBF16Config>(d_A, d_B, d_C, M, N, K, alpha, beta, stream);
+        else
+            launch_selected_bf16<H100LargeBF16Config>(d_A, d_B, d_C, M, N, K, alpha, beta, stream);
+        return;
+    }
+
+    // RTX5070 and default dispatch
     const auto thresholds = select_size_thresholds(arch);
     if (e <= thresholds.small_max)
         launch_selected_bf16<SmallBF16Config>(d_A, d_B, d_C, M, N, K, alpha, beta, stream);
