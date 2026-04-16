@@ -6,7 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/.."
 BUILD_DIR="${ROOT_DIR}/build"
-ARCH_DIR="unknown"
+ARCH_DIR=""
 EXPORT_PTX=0
 ARCHIVE_LIMIT=10
 
@@ -20,25 +20,36 @@ KERNEL_SOURCES=(
 
 PTX_TARGETS=()
 
-for arg in "$@"; do
-    case "${arg}" in
-        -h100)
-            ARCH_DIR="h100"
-            PTX_TARGETS=("h100")
+detect_arch_dir() {
+    local compute_cap=""
+    local major=""
+    local detected=""
+
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        compute_cap="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -n 1 | tr -d '\r ' || true)"
+    fi
+
+    major="${compute_cap%%.*}"
+    case "${major}" in
+        9)
+            detected="h100"
             ;;
-        -rtx5070)
-            ARCH_DIR="rtx5070"
-            PTX_TARGETS=("rtx5070")
+        12)
+            detected="rtx5070"
             ;;
-        -ptx)
-            EXPORT_PTX=1
+        *)
+            detected=""
             ;;
     esac
-done
 
-if [[ ${EXPORT_PTX} -eq 1 && ${#PTX_TARGETS[@]} -eq 0 ]]; then
-    PTX_TARGETS=("h100" "rtx5070")
-fi
+    if [[ -n "${detected}" ]]; then
+        echo "${detected}"
+        return 0
+    fi
+
+    echo "unknown"
+    return 0
+}
 
 ptx_compute_for_arch() {
     case "$1" in
@@ -82,14 +93,6 @@ export_ptx() {
     return ${failed}
 }
 
-if [[ ${EXPORT_PTX} -eq 1 ]]; then
-    export_ptx
-    exit $?
-fi
-
-RESULTS_DIR="${ROOT_DIR}/results/${ARCH_DIR}"
-ARCHIVE_DIR="${ROOT_DIR}/results/archive/${ARCH_DIR}"
-
 archive_previous_run() {
     local timestamp snapshot_dir archived_any=0
     local files=("${RESULTS_DIR}/benchmark_results.csv" "${RESULTS_DIR}/benchmark.log")
@@ -117,6 +120,7 @@ prune_archives() {
     shopt -s nullglob
     local -a archives=("${ARCHIVE_DIR}"/*/)
     shopt -u nullglob
+
     local count=${#archives[@]}
     if [[ ${count} -le ${ARCHIVE_LIMIT} ]]; then
         return 0
@@ -126,6 +130,49 @@ prune_archives() {
     local -a to_remove=("${archives[@]:0:${remove_count}}")
     rm -rf -- "${to_remove[@]}"
 }
+
+run_benchmark() {
+    echo ""
+    echo "=== Running benchmark ==="
+    "${BUILD_DIR}/cu_x_gemm" "$@" | tee "${RESULTS_DIR}/benchmark.log"
+}
+
+for arg in "$@"; do
+    case "${arg}" in
+        -h100)
+            ARCH_DIR="h100"
+            PTX_TARGETS=("h100")
+            ;;
+        -rtx5070)
+            ARCH_DIR="rtx5070"
+            PTX_TARGETS=("rtx5070")
+            ;;
+        -ptx)
+            EXPORT_PTX=1
+            ;;
+    esac
+done
+
+if [[ -z "${ARCH_DIR}" ]]; then
+    ARCH_DIR="$(detect_arch_dir)"
+fi
+
+if [[ ${EXPORT_PTX} -eq 1 && ${#PTX_TARGETS[@]} -eq 0 ]]; then
+    PTX_TARGETS=("h100" "rtx5070")
+fi
+
+if [[ "${ARCH_DIR}" == "unknown" ]]; then
+    echo "Warning: unable to autodetect GPU architecture; defaulting to rtx5070 results folder" >&2
+    ARCH_DIR="rtx5070"
+fi
+
+RESULTS_DIR="${ROOT_DIR}/results/${ARCH_DIR}"
+ARCHIVE_DIR="${ROOT_DIR}/results/archive/${ARCH_DIR}"
+
+if [[ ${EXPORT_PTX} -eq 1 ]]; then
+    export_ptx
+    exit $?
+fi
 
 mkdir -p "${RESULTS_DIR}"
 mkdir -p "${ARCHIVE_DIR}"
@@ -137,9 +184,7 @@ cd "${ROOT_DIR}"
 cmake -B build -S . > /dev/null
 cmake --build build --parallel > /dev/null
 
-echo ""
-echo "=== Running benchmark ==="
-"${BUILD_DIR}/cu_x_gemm" "$@" | tee "${RESULTS_DIR}/benchmark.log"
+run_benchmark "$@"
 
 echo ""
 echo "=== Done ==="

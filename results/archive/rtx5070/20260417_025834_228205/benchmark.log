@@ -1,0 +1,43 @@
+# GPU: NVIDIA GeForce RTX 5070 (SM 12.0)
+# Target arch: rtx5070
+# FP32 launcher: master (naive + size-tuned r2z)
+
+=== BF16 ===
+Dim    Selected     Custom(ms) CuBLAS(ms) CuBLAS-TC(ms)  Ratio%   L2_Error
+------------------------------------------------------------------------------
+32     r1_bf16          0.0016     0.0030       0.0030  188.7%   4.19e-08
+64     r1_bf16          0.0020     0.0028       0.0028  137.7%   0.00e+00
+128    r1_bf16          0.0034     0.0028       0.0029   84.1%   0.00e+00
+256    r1_bf16          0.0054     0.0032       0.0032   59.8%   0.00e+00
+512    r1_bf16          0.0222     0.0094       0.0094   42.3%   0.00e+00
+1024   r1_bf16          0.0590     0.0368       0.0369   62.4%   0.00e+00
+2048   r1_bf16          0.3311     0.2533       0.2540   76.5%   0.00e+00
+4096   r1_bf16          2.4334     1.9917       2.0395   81.8%   0.00e+00
+
+=== FP32 (CU Cores) ===
+# Primary reference: cuBLAS pedantic (pure FP32, CUDA cores)
+Dim    Selected     Custom(ms) Pedantic(ms)   Ratio%     L2_Err
+--------------------------------------------------------------------------
+32     naive            0.0020       0.0045   224.1%   2.66e-04
+64     naive            0.0033       0.0043   132.1%   2.65e-04
+128    r2z_small        0.0063       0.0045    72.4%   2.59e-04
+256    r2z_small        0.0106       0.0073    69.5%   2.61e-04
+512    r2z_medium       0.0275       0.0246    89.8%   2.61e-04
+1024   r2z_medium       0.1389       0.1079    77.7%   2.61e-04
+2048   r2z_large        0.8288       0.7407    89.4%   2.61e-04
+4096   r2z_large        6.4248       6.3136    98.3%   2.61e-04
+
+=== FP32 (TF32 / Tensor Cores) ===
+# Custom kernel: TF32 WMMA/PTX (r2z_tc1); reference: cuBLAS COMPUTE_32F_FAST_TF32
+Dim    Selected     Custom(ms)   TF32(ms)   Ratio%     L2_Err
+------------------------------------------------------------------------
+32     naive_fallback     0.0020     0.0046   229.4%   0.00e+00
+64     tc1_small        0.0033     0.0044   135.9%   6.94e-04
+128    tc1_small        0.0057     0.0030    52.0%   6.89e-04
+256    tc1_small        0.0102     0.0044    42.9%   6.88e-04
+512    tc1_medium       0.0568     0.0134    23.6%   6.88e-04
+1024   tc1_medium       0.1984     0.0740    37.3%   6.88e-04
+2048   tc1_large        1.1984     0.5526    46.1%   6.93e-04
+4096   tc1_large        8.7278     4.0364    46.2%   7.00e-04
+
+# CSV written to results/rtx5070/benchmark_results.csv

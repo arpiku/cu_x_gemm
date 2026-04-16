@@ -1,0 +1,1 @@
+-I/home/arpiku/cu_x_gemm/src -I/home/arpiku/cu_x_gemm/src/bf16 -I/home/arpiku/cu_x_gemm/src/fp32 -I/home/arpiku/cu_x_gemm/src/fp32_tc -isystem "/opt/cuda/targets/x86_64-linux/include" -isystem "/opt/cuda/targets/x86_64-linux/include/cccl"

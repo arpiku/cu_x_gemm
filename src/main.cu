@@ -1,37 +1,26 @@
 #include <array>
 #include <cublas_v2.h>
-#include <cuda_bf16.h>
-#include <cuda_runtime.h>
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 #include <string>
 
-#include "target_arch.h"
+#include "helpers.h"
 
-// ============ BENCHMARK CONFIG ============
-constexpr int DIMENSIONS[] = {32, 64, 128, 256, 512, 1024, 2048, 4096};
-constexpr int NUM_DIMS = sizeof(DIMENSIONS) / sizeof(DIMENSIONS[0]);
-
-constexpr int WARMUP_ITERATIONS = 10;
-constexpr int MEASURE_ITERATIONS = 50;
-
-// ==========================================
-
+// Kernel entry points.
 extern void launch_gemm_bf16(const __nv_bfloat16*, const __nv_bfloat16*, float*,
     int, int, int, float, float, cudaStream_t, TargetArch);
 extern const char* get_variant_id_bf16();
 extern const char* get_variant_desc_bf16();
 
-extern void launch_gemm_fp32_master_debug(const float*, const float*, float*,
-    int, int, int, float, float, cudaStream_t, TargetArch, const char**);
+extern void launch_gemm_fp32_master(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t, TargetArch);
 extern const char* get_variant_id_fp32_master();
 extern const char* get_variant_desc_fp32_master();
 
-extern void launch_gemm_fp32_r2z_tc1_debug(const float*, const float*, float*,
-    int, int, int, float, float, cudaStream_t, TargetArch, const char**);
+extern void launch_gemm_fp32_r2z_tc1(const float*, const float*, float*,
+    int, int, int, float, float, cudaStream_t, TargetArch);
 extern const char* get_variant_id_fp32_r2z_tc1();
 extern const char* get_variant_desc_fp32_r2z_tc1();
 
@@ -40,372 +29,307 @@ extern void cublas_gemm_bf16(cublasHandle_t, const __nv_bfloat16*, const __nv_bf
 extern void cublas_gemm_bf16_tc(cublasHandle_t, const __nv_bfloat16*, const __nv_bfloat16*, float*,
     int, int, int, float, float);
 
-extern void cublas_gemm_fp32_sgemm(cublasHandle_t, const float*, const float*, float*,
-    int, int, int, float, float);
-extern void cublas_gemm_fp32_cuda(cublasHandle_t, const float*, const float*, float*,
-    int, int, int, float, float);
 extern void cublas_gemm_fp32_pedantic(cublasHandle_t, const float*, const float*, float*,
     int, int, int, float, float);
 extern void cublas_gemm_fp32_tc(cublasHandle_t, const float*, const float*, float*,
     int, int, int, float, float);
 
-static void init_bf16(__nv_bfloat16* ptr, int n, unsigned seed) {
-    srand(seed);
-    for (int i = 0; i < n; ++i)
-        ptr[i] = __float2bfloat16((rand() / float(RAND_MAX)) * 2.0f - 1.0f);
-}
-
-static void init_fp32(float* ptr, int n, unsigned seed) {
-    srand(seed);
-    for (int i = 0; i < n; ++i)
-        ptr[i] = (rand() / float(RAND_MAX)) * 2.0f - 1.0f;
-}
-
-static float compute_l2_error(const float* a, const float* b, int n) {
-    double sum = 0.0, ref = 0.0;
-    for (int i = 0; i < n; ++i) {
-        double diff = double(a[i]) - double(b[i]);
-        sum += diff * diff;
-        ref += double(b[i]) * double(b[i]);
-    }
-    return float(sqrt(sum) / (sqrt(ref) + 1e-10));
-}
-
-struct BF16Result {
-    float custom_ms;
-    float cublas_ms;
-    float cublas_tc_ms;
-    float l2_error;
-};
-
-struct FP32Result {
-    float custom_ms;
-    float sgemm_ms;
-    float cuda_ms;
-    float pedantic_ms;
-    float tc_ms;
-    float l2_error;
-};
-
-struct FP32TCResult {
-    float custom_ms;
-    float tc_ms;      // cuBLAS COMPUTE_32F_FAST_TF32 reference
-    float l2_error;   // vs cuBLAS pedantic (pure FP32)
-};
-
-static std::array<const char*, NUM_DIMS> selected_kernel_names{};
-static std::array<const char*, NUM_DIMS> selected_tc_kernel_names{};
-
-static TargetArch detect_target_arch_from_device(const cudaDeviceProp& prop) {
-    if (prop.major == 9) return TargetArch::H100;
-    if (prop.major == 12) return TargetArch::RTX5070;
-    printf("Unsupported SM %d.%d; defaulting to RTX5070\n", prop.major, prop.minor);
-    return TargetArch::RTX5070;
-}
-
-static std::string benchmark_output_dir(TargetArch arch) {
-    return std::string("results/") + target_arch_name(arch);
-}
-
-static std::string benchmark_csv_path(TargetArch arch) {
-    return benchmark_output_dir(arch) + "/benchmark_results.csv";
+template <typename LaunchFn>
+static float benchmark_ms(cudaStream_t stream, LaunchFn&& launch_fn) {
+    return time_launch_ms(stream, WARMUP_ITERATIONS, MEASURE_ITERATIONS, launch_fn);
 }
 
 static void benchmark_bf16(int dim, cublasHandle_t handle, cudaStream_t stream,
                            TargetArch arch, BF16Result* out) {
-    int N = dim;
-    size_t bytes_A = N * N * sizeof(__nv_bfloat16);
-    size_t bytes_C = N * N * sizeof(float);
+    const int elements = dim * dim;
+    const size_t bytes_a = static_cast<size_t>(elements) * sizeof(__nv_bfloat16);
+    const size_t bytes_c = static_cast<size_t>(elements) * sizeof(float);
 
-    __nv_bfloat16 *d_A, *d_B;
-    float *d_C, *d_C_ref;
-    cudaMalloc(&d_A, bytes_A);
-    cudaMalloc(&d_B, bytes_A);
-    cudaMalloc(&d_C, bytes_C);
-    cudaMalloc(&d_C_ref, bytes_C);
+    __nv_bfloat16* d_A = nullptr;
+    __nv_bfloat16* d_B = nullptr;
+    float* d_C = nullptr;
+    float* d_C_ref = nullptr;
+    cudaMalloc(&d_A, bytes_a);
+    cudaMalloc(&d_B, bytes_a);
+    cudaMalloc(&d_C, bytes_c);
+    cudaMalloc(&d_C_ref, bytes_c);
 
-    __nv_bfloat16* h_A = (__nv_bfloat16*)malloc(bytes_A);
-    __nv_bfloat16* h_B = (__nv_bfloat16*)malloc(bytes_A);
-    init_bf16(h_A, N * N, 42);
-    init_bf16(h_B, N * N, 43);
+    __nv_bfloat16* h_A = static_cast<__nv_bfloat16*>(std::malloc(bytes_a));
+    __nv_bfloat16* h_B = static_cast<__nv_bfloat16*>(std::malloc(bytes_a));
+    init_bf16(h_A, elements, 42);
+    init_bf16(h_B, elements, 43);
 
-    cudaMemcpy(d_A, h_A, bytes_A, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_B, h_B, bytes_A, cudaMemcpyHostToDevice);
-    cudaMemset(d_C, 0, bytes_C);
-    cudaMemset(d_C_ref, 0, bytes_C);
+    cudaMemcpy(d_A, h_A, bytes_a, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, h_B, bytes_a, cudaMemcpyHostToDevice);
+    cudaMemset(d_C, 0, bytes_c);
+    cudaMemset(d_C_ref, 0, bytes_c);
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    out->custom_ms = benchmark_ms(stream, [&] {
+        launch_gemm_bf16(d_A, d_B, d_C, dim, dim, dim, 1.0f, 0.0f, stream, arch);
+    });
 
-    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        launch_gemm_bf16(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch);
-    cudaStreamSynchronize(stream);
+    out->cublas_ms = benchmark_ms(stream, [&] {
+        cublas_gemm_bf16(handle, d_A, d_B, d_C_ref, dim, dim, dim, 1.0f, 0.0f);
+    });
 
-    cudaEventRecord(start, stream);
-    for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-        launch_gemm_bf16(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch);
-    cudaEventRecord(stop, stream);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&out->custom_ms, start, stop);
-    out->custom_ms /= MEASURE_ITERATIONS;
+    cudaMemset(d_C_ref, 0, bytes_c);
+    out->cublas_tc_ms = benchmark_ms(stream, [&] {
+        cublas_gemm_bf16_tc(handle, d_A, d_B, d_C_ref, dim, dim, dim, 1.0f, 0.0f);
+    });
 
-    auto bench_cublas = [&](auto func, float* out_ms) {
-        cudaMemset(d_C_ref, 0, bytes_C);
-        for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-            func(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-        cudaStreamSynchronize(stream);
+    float* h_C = static_cast<float*>(std::malloc(bytes_c));
+    float* h_C_ref = static_cast<float*>(std::malloc(bytes_c));
+    cudaMemcpy(h_C, d_C, bytes_c, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_C_ref, d_C_ref, bytes_c, cudaMemcpyDeviceToHost);
+    out->l2_error = compute_l2_error(h_C, h_C_ref, elements);
 
-        cudaEventRecord(start, stream);
-        for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-            func(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-        cudaEventRecord(stop, stream);
-        cudaEventSynchronize(stop);
-        cudaEventElapsedTime(out_ms, start, stop);
-        *out_ms /= MEASURE_ITERATIONS;
-    };
-
-    bench_cublas(cublas_gemm_bf16, &out->cublas_ms);
-    bench_cublas(cublas_gemm_bf16_tc, &out->cublas_tc_ms);
-
-    float* h_C = (float*)malloc(bytes_C);
-    float* h_C_ref = (float*)malloc(bytes_C);
-    cudaMemcpy(h_C, d_C, bytes_C, cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_C_ref, d_C_ref, bytes_C, cudaMemcpyDeviceToHost);
-    out->l2_error = compute_l2_error(h_C, h_C_ref, N * N);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-    cudaFree(d_A); cudaFree(d_B); cudaFree(d_C); cudaFree(d_C_ref);
-    free(h_A); free(h_B); free(h_C); free(h_C_ref);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+    cudaFree(d_C_ref);
+    std::free(h_A);
+    std::free(h_B);
+    std::free(h_C);
+    std::free(h_C_ref);
 }
 
 static void benchmark_fp32(int dim, cublasHandle_t handle, cudaStream_t stream,
                            TargetArch arch, FP32Result* out) {
-    int N = dim;
-    size_t bytes = N * N * sizeof(float);
+    const int elements = dim * dim;
+    const size_t bytes = static_cast<size_t>(elements) * sizeof(float);
 
-    float *d_A, *d_B, *d_C, *d_C_ref;
+    float* d_A = nullptr;
+    float* d_B = nullptr;
+    float* d_C = nullptr;
+    float* d_C_ref = nullptr;
     cudaMalloc(&d_A, bytes);
     cudaMalloc(&d_B, bytes);
     cudaMalloc(&d_C, bytes);
     cudaMalloc(&d_C_ref, bytes);
 
-    float* h_A = (float*)malloc(bytes);
-    float* h_B = (float*)malloc(bytes);
-    init_fp32(h_A, N * N, 42);
-    init_fp32(h_B, N * N, 43);
+    float* h_A = static_cast<float*>(std::malloc(bytes));
+    float* h_B = static_cast<float*>(std::malloc(bytes));
+    init_fp32(h_A, elements, 42);
+    init_fp32(h_B, elements, 43);
 
     cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
     cudaMemset(d_C, 0, bytes);
     cudaMemset(d_C_ref, 0, bytes);
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    out->custom_ms = benchmark_ms(stream, [&] {
+        launch_gemm_fp32_master(d_A, d_B, d_C, dim, dim, dim, 1.0f, 0.0f, stream, arch);
+    });
 
-    const char* selected_kernel = nullptr;
-    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        launch_gemm_fp32_master_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch,
-                                       &selected_kernel);
-    cudaStreamSynchronize(stream);
+    out->pedantic_ms = benchmark_ms(stream, [&] {
+        cublas_gemm_fp32_pedantic(handle, d_A, d_B, d_C_ref, dim, dim, dim, 1.0f, 0.0f);
+    });
 
-    cudaEventRecord(start, stream);
-    for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-        launch_gemm_fp32_master_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch,
-                                       &selected_kernel);
-    cudaEventRecord(stop, stream);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&out->custom_ms, start, stop);
-    out->custom_ms /= MEASURE_ITERATIONS;
-    
-    // Store selected kernel name for this dimension
-    int dim_idx = -1;
-    for (int i = 0; i < NUM_DIMS; ++i) {
-        if (DIMENSIONS[i] == dim) {
-            dim_idx = i;
-            break;
-        }
-    }
-    if (dim_idx >= 0 && selected_kernel != nullptr) {
-        selected_kernel_names[dim_idx] = selected_kernel;
-    }
-
-    auto bench_cublas = [&](auto func, float* out_ms) {
-        cudaMemset(d_C_ref, 0, bytes);
-        for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-            func(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-        cudaStreamSynchronize(stream);
-
-        cudaEventRecord(start, stream);
-        for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-            func(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-        cudaEventRecord(stop, stream);
-        cudaEventSynchronize(stop);
-        cudaEventElapsedTime(out_ms, start, stop);
-        *out_ms /= MEASURE_ITERATIONS;
-    };
-
-    bench_cublas(cublas_gemm_fp32_sgemm, &out->sgemm_ms);
-    bench_cublas(cublas_gemm_fp32_cuda, &out->cuda_ms);
-    bench_cublas(cublas_gemm_fp32_pedantic, &out->pedantic_ms);
-    bench_cublas(cublas_gemm_fp32_tc, &out->tc_ms);
-
-    float* h_C = (float*)malloc(bytes);
-    float* h_C_ref = (float*)malloc(bytes);
+    float* h_C = static_cast<float*>(std::malloc(bytes));
+    float* h_C_ref = static_cast<float*>(std::malloc(bytes));
     cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
     cudaMemcpy(h_C_ref, d_C_ref, bytes, cudaMemcpyDeviceToHost);
-    out->l2_error = compute_l2_error(h_C, h_C_ref, N * N);
+    out->l2_error = compute_l2_error(h_C, h_C_ref, elements);
 
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-    cudaFree(d_A); cudaFree(d_B); cudaFree(d_C); cudaFree(d_C_ref);
-    free(h_A); free(h_B); free(h_C); free(h_C_ref);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+    cudaFree(d_C_ref);
+    std::free(h_A);
+    std::free(h_B);
+    std::free(h_C);
+    std::free(h_C_ref);
 }
 
 static void benchmark_fp32_tc(int dim, cublasHandle_t handle, cudaStream_t stream,
                               TargetArch arch, FP32TCResult* out) {
-    int N = dim;
-    size_t bytes = N * N * sizeof(float);
+    const int elements = dim * dim;
+    const size_t bytes = static_cast<size_t>(elements) * sizeof(float);
 
-    float *d_A, *d_B, *d_C, *d_C_ref;
+    float* d_A = nullptr;
+    float* d_B = nullptr;
+    float* d_C = nullptr;
+    float* d_C_ref = nullptr;
     cudaMalloc(&d_A, bytes);
     cudaMalloc(&d_B, bytes);
     cudaMalloc(&d_C, bytes);
     cudaMalloc(&d_C_ref, bytes);
 
-    float* h_A = (float*)malloc(bytes);
-    float* h_B = (float*)malloc(bytes);
-    init_fp32(h_A, N * N, 42);
-    init_fp32(h_B, N * N, 43);
+    float* h_A = static_cast<float*>(std::malloc(bytes));
+    float* h_B = static_cast<float*>(std::malloc(bytes));
+    init_fp32(h_A, elements, 42);
+    init_fp32(h_B, elements, 43);
 
     cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
     cudaMemset(d_C, 0, bytes);
     cudaMemset(d_C_ref, 0, bytes);
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    out->custom_ms = benchmark_ms(stream, [&] {
+        launch_gemm_fp32_r2z_tc1(d_A, d_B, d_C, dim, dim, dim, 1.0f, 0.0f, stream, arch);
+    });
 
-    const char* selected_kernel = nullptr;
-    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        launch_gemm_fp32_r2z_tc1_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch,
-                                        &selected_kernel);
+    cublas_gemm_fp32_pedantic(handle, d_A, d_B, d_C_ref, dim, dim, dim, 1.0f, 0.0f);
     cudaStreamSynchronize(stream);
 
-    cudaEventRecord(start, stream);
-    for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-        launch_gemm_fp32_r2z_tc1_debug(d_A, d_B, d_C, N, N, N, 1.0f, 0.0f, stream, arch,
-                                        &selected_kernel);
-    cudaEventRecord(stop, stream);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&out->custom_ms, start, stop);
-    out->custom_ms /= MEASURE_ITERATIONS;
-
-    int dim_idx = -1;
-    for (int i = 0; i < NUM_DIMS; ++i) {
-        if (DIMENSIONS[i] == dim) { dim_idx = i; break; }
-    }
-    if (dim_idx >= 0 && selected_kernel != nullptr)
-        selected_tc_kernel_names[dim_idx] = selected_kernel;
-
-    // cuBLAS pedantic as L2 error reference (pure FP32)
-    cudaMemset(d_C_ref, 0, bytes);
-    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        cublas_gemm_fp32_pedantic(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-    cudaStreamSynchronize(stream);
-    cudaMemset(d_C_ref, 0, bytes);
-    cublas_gemm_fp32_pedantic(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-    cudaStreamSynchronize(stream);
-
-    float* h_C = (float*)malloc(bytes);
-    float* h_C_ref = (float*)malloc(bytes);
+    float* h_C = static_cast<float*>(std::malloc(bytes));
+    float* h_C_ref = static_cast<float*>(std::malloc(bytes));
     cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
     cudaMemcpy(h_C_ref, d_C_ref, bytes, cudaMemcpyDeviceToHost);
-    out->l2_error = compute_l2_error(h_C, h_C_ref, N * N);
+    out->l2_error = compute_l2_error(h_C, h_C_ref, elements);
 
-    // cuBLAS TF32 as performance reference
     cudaMemset(d_C_ref, 0, bytes);
-    for (int i = 0; i < WARMUP_ITERATIONS; ++i)
-        cublas_gemm_fp32_tc(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-    cudaStreamSynchronize(stream);
-    cudaEventRecord(start, stream);
-    for (int i = 0; i < MEASURE_ITERATIONS; ++i)
-        cublas_gemm_fp32_tc(handle, d_A, d_B, d_C_ref, N, N, N, 1.0f, 0.0f);
-    cudaEventRecord(stop, stream);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&out->tc_ms, start, stop);
-    out->tc_ms /= MEASURE_ITERATIONS;
+    out->tc_ms = benchmark_ms(stream, [&] {
+        cublas_gemm_fp32_tc(handle, d_A, d_B, d_C_ref, dim, dim, dim, 1.0f, 0.0f);
+    });
 
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-    cudaFree(d_A); cudaFree(d_B); cudaFree(d_C); cudaFree(d_C_ref);
-    free(h_A); free(h_B); free(h_C); free(h_C_ref);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+    cudaFree(d_C_ref);
+    std::free(h_A);
+    std::free(h_B);
+    std::free(h_C);
+    std::free(h_C_ref);
 }
 
-static void write_csv_with_arch(const std::string& path,
-                                const int* dims, int num_dims,
-                                const BF16Result* bf16_results,
-                                const FP32Result* fp32_results,
-                                const FP32TCResult* fp32_tc_results,
-                                const char* target_arch,
-                                const char* gpu_name,
-                                int sm_major,
-                                int sm_minor,
-                                const char* variant_bf16, const char* desc_bf16,
-                                const char* variant_fp32, const char* desc_fp32,
-                                const char* variant_tc, const char* desc_tc) {
+static void run_bf16_benchmarks(cublasHandle_t handle, cudaStream_t stream,
+                                TargetArch arch, BF16Result* results) {
+    for (int i = 0; i < NUM_DIMS; ++i) {
+        benchmark_bf16(DIMENSIONS[i], handle, stream, arch, &results[i]);
+    }
+}
+
+static void run_fp32_benchmarks(cublasHandle_t handle, cudaStream_t stream,
+                                TargetArch arch, FP32Result* results) {
+    for (int i = 0; i < NUM_DIMS; ++i) {
+        benchmark_fp32(DIMENSIONS[i], handle, stream, arch, &results[i]);
+    }
+}
+
+static void run_fp32_tc_benchmarks(cublasHandle_t handle, cudaStream_t stream,
+                                   TargetArch arch, FP32TCResult* results) {
+    for (int i = 0; i < NUM_DIMS; ++i) {
+        benchmark_fp32_tc(DIMENSIONS[i], handle, stream, arch, &results[i]);
+    }
+}
+
+static void print_bf16_report(const char* variant_bf16, const BF16Result* results) {
+    std::printf("=== BF16 ===\n");
+    std::printf("%-6s %-12s %10s %10s %12s %7s %10s\n",
+                "Dim", "Selected", "Custom(ms)", "CuBLAS(ms)", "CuBLAS-TC(ms)",
+                "Ratio%", "L2_Error");
+    std::printf("%s\n", std::string(78, '-').c_str());
+
+    for (int i = 0; i < NUM_DIMS; ++i) {
+        const auto& r = results[i];
+        const float ratio = (r.cublas_ms / r.custom_ms) * 100.0f;
+        std::printf("%-6d %-12s %10.4f %10.4f %12.4f %6.1f%% %10.2e\n",
+                    DIMENSIONS[i], variant_bf16, r.custom_ms, r.cublas_ms,
+                    r.cublas_tc_ms, ratio, r.l2_error);
+    }
+}
+
+static void print_fp32_report(const FP32Result* results) {
+    std::printf("\n=== FP32 (CU Cores) ===\n");
+    std::printf("# Primary reference: cuBLAS pedantic (pure FP32, CUDA cores)\n");
+    std::printf("%-6s %-14s %10s %12s %8s %10s\n",
+                "Dim", "Variant", "Custom(ms)", "Pedantic(ms)", "Ratio%", "L2_Err");
+    std::printf("%s\n", std::string(76, '-').c_str());
+
+    for (int i = 0; i < NUM_DIMS; ++i) {
+        const auto& r = results[i];
+        const float ratio = (r.pedantic_ms / r.custom_ms) * 100.0f;
+        std::printf("%-6d %-14s %10.4f %12.4f %7.1f%% %10.2e\n",
+                    DIMENSIONS[i], get_variant_id_fp32_master(),
+                    r.custom_ms, r.pedantic_ms, ratio, r.l2_error);
+    }
+}
+
+static void print_fp32_tc_report(const FP32TCResult* results) {
+    std::printf("\n=== FP32 (TF32 / Tensor Cores) ===\n");
+    std::printf("# Custom kernel: TF32 WMMA/PTX (r2z_tc1); reference: cuBLAS COMPUTE_32F_FAST_TF32\n");
+    std::printf("%-6s %-14s %10s %10s %8s %10s\n",
+                "Dim", "Variant", "Custom(ms)", "TF32(ms)", "Ratio%", "L2_Err");
+    std::printf("%s\n", std::string(76, '-').c_str());
+
+    for (int i = 0; i < NUM_DIMS; ++i) {
+        const auto& r = results[i];
+        const float ratio = (r.tc_ms / r.custom_ms) * 100.0f;
+        std::printf("%-6d %-14s %10.4f %10.4f %7.1f%% %10.2e\n",
+                    DIMENSIONS[i], get_variant_id_fp32_r2z_tc1(),
+                    r.custom_ms, r.tc_ms, ratio, r.l2_error);
+    }
+}
+
+static void write_csv_with_arch(
+    const std::string& path,
+    const int* dims,
+    int num_dims,
+    const BF16Result* bf16_results,
+    const FP32Result* fp32_results,
+    const FP32TCResult* fp32_tc_results,
+    const char* target_arch,
+    const char* gpu_name,
+    int sm_major,
+    int sm_minor,
+    const char* variant_bf16,
+    const char* desc_bf16,
+    const char* variant_fp32,
+    const char* desc_fp32,
+    const char* variant_tc,
+    const char* desc_tc)
+{
     std::ofstream f(path);
-    f << "dim,dtype,target_arch,gpu_name,sm,variant,desc,custom_ms,cublas_32f_ms,cublas_tc_ms,"
-      << "sgemm_ms,cuda_ms,pedantic_ms,tc_ms,l2_error\n";
+    f << "dim,section,target_arch,gpu_name,sm,variant,desc,custom_ms,reference_ms,l2_error\n";
+
     for (int i = 0; i < num_dims; ++i) {
         const auto& r = bf16_results[i];
         f << dims[i] << ",BF16," << target_arch << "," << gpu_name << ","
           << sm_major << "." << sm_minor << "," << variant_bf16 << "," << desc_bf16 << ","
-          << r.custom_ms << "," << r.cublas_ms << "," << r.cublas_tc_ms << ",,,"
-          << r.l2_error << "\n";
+          << r.custom_ms << "," << r.cublas_ms << "," << r.l2_error << "\n";
     }
+
     for (int i = 0; i < num_dims; ++i) {
         const auto& r = fp32_results[i];
-        f << dims[i] << ",FP32," << target_arch << "," << gpu_name << ","
+        f << dims[i] << ",FP32_PEDANTIC," << target_arch << "," << gpu_name << ","
           << sm_major << "." << sm_minor << "," << variant_fp32 << "," << desc_fp32 << ","
-          << r.custom_ms << ",,,"
-          << r.sgemm_ms << "," << r.cuda_ms << "," << r.pedantic_ms << "," << r.tc_ms << ","
-          << r.l2_error << "\n";
+          << r.custom_ms << "," << r.pedantic_ms << "," << r.l2_error << "\n";
     }
+
     for (int i = 0; i < num_dims; ++i) {
         const auto& r = fp32_tc_results[i];
-        f << dims[i] << ",FP32-TC," << target_arch << "," << gpu_name << ","
+        f << dims[i] << ",FP32_TF32," << target_arch << "," << gpu_name << ","
           << sm_major << "." << sm_minor << "," << variant_tc << "," << desc_tc << ","
-          << r.custom_ms << ",,,,,," << r.tc_ms << "," << r.l2_error << "\n";
+          << r.custom_ms << "," << r.tc_ms << "," << r.l2_error << "\n";
     }
 }
 
 int main(int argc, char** argv) {
-    cudaDeviceProp prop;
+    cudaDeviceProp prop{};
     cudaGetDeviceProperties(&prop, 0);
     TargetArch arch = detect_target_arch_from_device(prop);
+
     for (int i = 1; i < argc; ++i) {
         if (!parse_target_arch_flag(argv[i], &arch)) {
-            printf("Invalid arg: %s\n", argv[i]);
-            printf("Use -h100 or -rtx5070\n");
+            std::printf("Invalid arg: %s\n", argv[i]);
+            std::printf("Use -h100 or -rtx5070\n");
             return 1;
         }
     }
-    printf("# GPU: %s (SM %d.%d)\n", prop.name, prop.major, prop.minor);
-    printf("# Target arch: %s\n", target_arch_name(arch));
-    printf("# FP32 launcher: master (naive + size-tuned r2z)\n\n");
+
+    std::printf("# GPU: %s (SM %d.%d)\n", prop.name, prop.major, prop.minor);
+    std::printf("# Target arch: %s\n", target_arch_name(arch));
+    std::printf("# Comparison variants: BF16 tensor core, FP32 pedantic, FP32 TF32 tensor core\n\n");
 
     const std::string out_dir = benchmark_output_dir(arch);
     std::filesystem::create_directories(out_dir);
     const std::string csv_path = benchmark_csv_path(arch);
 
-    cublasHandle_t handle;
+    cublasHandle_t handle = nullptr;
     cublasCreate(&handle);
 
-    cudaStream_t stream;
+    cudaStream_t stream = nullptr;
     cudaStreamCreate(&stream);
     cublasSetStream(handle, stream);
 
@@ -413,71 +337,26 @@ int main(int argc, char** argv) {
     const char* desc_bf16 = get_variant_desc_bf16();
     const char* variant_fp32 = get_variant_id_fp32_master();
     const char* desc_fp32 = get_variant_desc_fp32_master();
-
-    BF16Result   bf16_results[NUM_DIMS];
-    FP32Result   fp32_results[NUM_DIMS];
-    FP32TCResult fp32_tc_results[NUM_DIMS];
-
-    printf("=== BF16 ===\n");
-    printf("%-6s %-12s %10s %10s %12s %7s %10s\n",
-        "Dim", "Selected", "Custom(ms)", "CuBLAS(ms)", "CuBLAS-TC(ms)", "Ratio%", "L2_Error");
-    printf("%s\n", std::string(78, '-').c_str());
-
-    for (int d = 0; d < NUM_DIMS; ++d) {
-        int dim = DIMENSIONS[d];
-        benchmark_bf16(dim, handle, stream, arch, &bf16_results[d]);
-        const auto& r = bf16_results[d];
-        float ratio = (r.cublas_ms / r.custom_ms) * 100.0f;
-        printf("%-6d %-12s %10.4f %10.4f %12.4f %6.1f%% %10.2e\n",
-            dim, variant_bf16, r.custom_ms, r.cublas_ms, r.cublas_tc_ms, ratio, r.l2_error);
-    }
-
-    for (int d = 0; d < NUM_DIMS; ++d) {
-        int dim = DIMENSIONS[d];
-        benchmark_fp32(dim, handle, stream, arch, &fp32_results[d]);
-    }
-    for (int d = 0; d < NUM_DIMS; ++d) {
-        int dim = DIMENSIONS[d];
-        benchmark_fp32_tc(dim, handle, stream, arch, &fp32_tc_results[d]);
-    }
-
-    printf("\n=== FP32 (CU Cores) ===\n");
-    printf("# Primary reference: cuBLAS pedantic (pure FP32, CUDA cores)\n");
-    printf("%-6s %-12s %10s %12s %8s %10s\n",
-        "Dim", "Selected", "Custom(ms)", "Pedantic(ms)", "Ratio%", "L2_Err");
-    printf("%s\n", std::string(74, '-').c_str());
-
-    for (int d = 0; d < NUM_DIMS; ++d) {
-        const int dim = DIMENSIONS[d];
-        const auto& r = fp32_results[d];
-        const char* sel = selected_kernel_names[d] ? selected_kernel_names[d] : "unknown";
-        const float r_pedantic = (r.pedantic_ms / r.custom_ms) * 100.0f;
-        printf("%-6d %-12s %10.4f %12.4f %7.1f%% %10.2e\n",
-            dim, sel, r.custom_ms, r.pedantic_ms, r_pedantic, r.l2_error);
-    }
-
     const char* variant_tc = get_variant_id_fp32_r2z_tc1();
-    const char* desc_tc    = get_variant_desc_fp32_r2z_tc1();
+    const char* desc_tc = get_variant_desc_fp32_r2z_tc1();
 
-    printf("\n=== FP32 (TF32 / Tensor Cores) ===\n");
-    printf("# Custom kernel: TF32 WMMA/PTX (r2z_tc1); reference: cuBLAS COMPUTE_32F_FAST_TF32\n");
-    printf("%-6s %-12s %10s %10s %8s %10s\n",
-        "Dim", "Selected", "Custom(ms)", "TF32(ms)", "Ratio%", "L2_Err");
-    printf("%s\n", std::string(72, '-').c_str());
+    std::array<BF16Result, NUM_DIMS> bf16_results{};
+    std::array<FP32Result, NUM_DIMS> fp32_results{};
+    std::array<FP32TCResult, NUM_DIMS> fp32_tc_results{};
 
-    for (int d = 0; d < NUM_DIMS; ++d) {
-        const int dim = DIMENSIONS[d];
-        const auto& r = fp32_tc_results[d];
-        const char* sel = selected_tc_kernel_names[d] ? selected_tc_kernel_names[d] : "unknown";
-        const float r_tc = (r.tc_ms / r.custom_ms) * 100.0f;
-        printf("%-6d %-12s %10.4f %10.4f %7.1f%% %10.2e\n",
-            dim, sel, r.custom_ms, r.tc_ms, r_tc, r.l2_error);
-    }
+    run_bf16_benchmarks(handle, stream, arch, bf16_results.data());
+    run_fp32_benchmarks(handle, stream, arch, fp32_results.data());
+    run_fp32_tc_benchmarks(handle, stream, arch, fp32_tc_results.data());
 
-    write_csv_with_arch(csv_path, DIMENSIONS, NUM_DIMS, bf16_results, fp32_results, fp32_tc_results,
+    print_bf16_report(variant_bf16, bf16_results.data());
+    print_fp32_report(fp32_results.data());
+    print_fp32_tc_report(fp32_tc_results.data());
+
+    write_csv_with_arch(csv_path, DIMENSIONS, NUM_DIMS,
+                        bf16_results.data(), fp32_results.data(), fp32_tc_results.data(),
                         target_arch_name(arch), prop.name, prop.major, prop.minor,
                         variant_bf16, desc_bf16, variant_fp32, desc_fp32, variant_tc, desc_tc);
-    printf("\n# CSV written to %s\n", csv_path.c_str());
+    std::printf("\n# CSV written to %s\n", csv_path.c_str());
 
     cublasDestroy(handle);
     cudaStreamDestroy(stream);
