@@ -129,293 +129,29 @@ cu_x_gemm/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/build
 .PHONY : cu_x_gemm/fast
 
-src/bf16/gemm_bf16.o: src/bf16/gemm_bf16.cu.o
-.PHONY : src/bf16/gemm_bf16.o
+src/fp32/cublas_gemm_fp32_pedantic.o: src/fp32/cublas_gemm_fp32_pedantic.cu.o
+.PHONY : src/fp32/cublas_gemm_fp32_pedantic.o
 
 # target to build an object file
-src/bf16/gemm_bf16.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.o
-.PHONY : src/bf16/gemm_bf16.cu.o
+src/fp32/cublas_gemm_fp32_pedantic.cu.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.o
+.PHONY : src/fp32/cublas_gemm_fp32_pedantic.cu.o
 
-src/bf16/gemm_bf16.i: src/bf16/gemm_bf16.cu.i
-.PHONY : src/bf16/gemm_bf16.i
-
-# target to preprocess a source file
-src/bf16/gemm_bf16.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.i
-.PHONY : src/bf16/gemm_bf16.cu.i
-
-src/bf16/gemm_bf16.s: src/bf16/gemm_bf16.cu.s
-.PHONY : src/bf16/gemm_bf16.s
-
-# target to generate assembly for a file
-src/bf16/gemm_bf16.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.s
-.PHONY : src/bf16/gemm_bf16.cu.s
-
-src/bf16/gemm_bf16_naive.o: src/bf16/gemm_bf16_naive.cu.o
-.PHONY : src/bf16/gemm_bf16_naive.o
-
-# target to build an object file
-src/bf16/gemm_bf16_naive.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.o
-.PHONY : src/bf16/gemm_bf16_naive.cu.o
-
-src/bf16/gemm_bf16_naive.i: src/bf16/gemm_bf16_naive.cu.i
-.PHONY : src/bf16/gemm_bf16_naive.i
+src/fp32/cublas_gemm_fp32_pedantic.i: src/fp32/cublas_gemm_fp32_pedantic.cu.i
+.PHONY : src/fp32/cublas_gemm_fp32_pedantic.i
 
 # target to preprocess a source file
-src/bf16/gemm_bf16_naive.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.i
-.PHONY : src/bf16/gemm_bf16_naive.cu.i
+src/fp32/cublas_gemm_fp32_pedantic.cu.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.i
+.PHONY : src/fp32/cublas_gemm_fp32_pedantic.cu.i
 
-src/bf16/gemm_bf16_naive.s: src/bf16/gemm_bf16_naive.cu.s
-.PHONY : src/bf16/gemm_bf16_naive.s
-
-# target to generate assembly for a file
-src/bf16/gemm_bf16_naive.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.s
-.PHONY : src/bf16/gemm_bf16_naive.cu.s
-
-src/bf16/gemm_bf16_wmma_h100.o: src/bf16/gemm_bf16_wmma_h100.cu.o
-.PHONY : src/bf16/gemm_bf16_wmma_h100.o
-
-# target to build an object file
-src/bf16/gemm_bf16_wmma_h100.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.o
-.PHONY : src/bf16/gemm_bf16_wmma_h100.cu.o
-
-src/bf16/gemm_bf16_wmma_h100.i: src/bf16/gemm_bf16_wmma_h100.cu.i
-.PHONY : src/bf16/gemm_bf16_wmma_h100.i
-
-# target to preprocess a source file
-src/bf16/gemm_bf16_wmma_h100.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.i
-.PHONY : src/bf16/gemm_bf16_wmma_h100.cu.i
-
-src/bf16/gemm_bf16_wmma_h100.s: src/bf16/gemm_bf16_wmma_h100.cu.s
-.PHONY : src/bf16/gemm_bf16_wmma_h100.s
+src/fp32/cublas_gemm_fp32_pedantic.s: src/fp32/cublas_gemm_fp32_pedantic.cu.s
+.PHONY : src/fp32/cublas_gemm_fp32_pedantic.s
 
 # target to generate assembly for a file
-src/bf16/gemm_bf16_wmma_h100.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.s
-.PHONY : src/bf16/gemm_bf16_wmma_h100.cu.s
-
-src/bf16/gemm_bf16_wmma_rtx5070.o: src/bf16/gemm_bf16_wmma_rtx5070.cu.o
-.PHONY : src/bf16/gemm_bf16_wmma_rtx5070.o
-
-# target to build an object file
-src/bf16/gemm_bf16_wmma_rtx5070.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.o
-.PHONY : src/bf16/gemm_bf16_wmma_rtx5070.cu.o
-
-src/bf16/gemm_bf16_wmma_rtx5070.i: src/bf16/gemm_bf16_wmma_rtx5070.cu.i
-.PHONY : src/bf16/gemm_bf16_wmma_rtx5070.i
-
-# target to preprocess a source file
-src/bf16/gemm_bf16_wmma_rtx5070.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.i
-.PHONY : src/bf16/gemm_bf16_wmma_rtx5070.cu.i
-
-src/bf16/gemm_bf16_wmma_rtx5070.s: src/bf16/gemm_bf16_wmma_rtx5070.cu.s
-.PHONY : src/bf16/gemm_bf16_wmma_rtx5070.s
-
-# target to generate assembly for a file
-src/bf16/gemm_bf16_wmma_rtx5070.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.s
-.PHONY : src/bf16/gemm_bf16_wmma_rtx5070.cu.s
-
-src/cublas_gemm.o: src/cublas_gemm.cu.o
-.PHONY : src/cublas_gemm.o
-
-# target to build an object file
-src/cublas_gemm.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.o
-.PHONY : src/cublas_gemm.cu.o
-
-src/cublas_gemm.i: src/cublas_gemm.cu.i
-.PHONY : src/cublas_gemm.i
-
-# target to preprocess a source file
-src/cublas_gemm.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.i
-.PHONY : src/cublas_gemm.cu.i
-
-src/cublas_gemm.s: src/cublas_gemm.cu.s
-.PHONY : src/cublas_gemm.s
-
-# target to generate assembly for a file
-src/cublas_gemm.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.s
-.PHONY : src/cublas_gemm.cu.s
-
-src/fp32/gemm_fp32_master.o: src/fp32/gemm_fp32_master.cu.o
-.PHONY : src/fp32/gemm_fp32_master.o
-
-# target to build an object file
-src/fp32/gemm_fp32_master.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.o
-.PHONY : src/fp32/gemm_fp32_master.cu.o
-
-src/fp32/gemm_fp32_master.i: src/fp32/gemm_fp32_master.cu.i
-.PHONY : src/fp32/gemm_fp32_master.i
-
-# target to preprocess a source file
-src/fp32/gemm_fp32_master.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.i
-.PHONY : src/fp32/gemm_fp32_master.cu.i
-
-src/fp32/gemm_fp32_master.s: src/fp32/gemm_fp32_master.cu.s
-.PHONY : src/fp32/gemm_fp32_master.s
-
-# target to generate assembly for a file
-src/fp32/gemm_fp32_master.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.s
-.PHONY : src/fp32/gemm_fp32_master.cu.s
-
-src/fp32/gemm_fp32_naive.o: src/fp32/gemm_fp32_naive.cu.o
-.PHONY : src/fp32/gemm_fp32_naive.o
-
-# target to build an object file
-src/fp32/gemm_fp32_naive.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.o
-.PHONY : src/fp32/gemm_fp32_naive.cu.o
-
-src/fp32/gemm_fp32_naive.i: src/fp32/gemm_fp32_naive.cu.i
-.PHONY : src/fp32/gemm_fp32_naive.i
-
-# target to preprocess a source file
-src/fp32/gemm_fp32_naive.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.i
-.PHONY : src/fp32/gemm_fp32_naive.cu.i
-
-src/fp32/gemm_fp32_naive.s: src/fp32/gemm_fp32_naive.cu.s
-.PHONY : src/fp32/gemm_fp32_naive.s
-
-# target to generate assembly for a file
-src/fp32/gemm_fp32_naive.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.s
-.PHONY : src/fp32/gemm_fp32_naive.cu.s
-
-src/fp32/gemm_fp32_r2z.o: src/fp32/gemm_fp32_r2z.cu.o
-.PHONY : src/fp32/gemm_fp32_r2z.o
-
-# target to build an object file
-src/fp32/gemm_fp32_r2z.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.o
-.PHONY : src/fp32/gemm_fp32_r2z.cu.o
-
-src/fp32/gemm_fp32_r2z.i: src/fp32/gemm_fp32_r2z.cu.i
-.PHONY : src/fp32/gemm_fp32_r2z.i
-
-# target to preprocess a source file
-src/fp32/gemm_fp32_r2z.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.i
-.PHONY : src/fp32/gemm_fp32_r2z.cu.i
-
-src/fp32/gemm_fp32_r2z.s: src/fp32/gemm_fp32_r2z.cu.s
-.PHONY : src/fp32/gemm_fp32_r2z.s
-
-# target to generate assembly for a file
-src/fp32/gemm_fp32_r2z.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.s
-.PHONY : src/fp32/gemm_fp32_r2z.cu.s
-
-src/fp32_tc/cublas_gemm_fp32_pedantic.o: src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o
-.PHONY : src/fp32_tc/cublas_gemm_fp32_pedantic.o
-
-# target to build an object file
-src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o
-.PHONY : src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o
-
-src/fp32_tc/cublas_gemm_fp32_pedantic.i: src/fp32_tc/cublas_gemm_fp32_pedantic.cu.i
-.PHONY : src/fp32_tc/cublas_gemm_fp32_pedantic.i
-
-# target to preprocess a source file
-src/fp32_tc/cublas_gemm_fp32_pedantic.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.i
-.PHONY : src/fp32_tc/cublas_gemm_fp32_pedantic.cu.i
-
-src/fp32_tc/cublas_gemm_fp32_pedantic.s: src/fp32_tc/cublas_gemm_fp32_pedantic.cu.s
-.PHONY : src/fp32_tc/cublas_gemm_fp32_pedantic.s
-
-# target to generate assembly for a file
-src/fp32_tc/cublas_gemm_fp32_pedantic.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.s
-.PHONY : src/fp32_tc/cublas_gemm_fp32_pedantic.cu.s
-
-src/fp32_tc/cublas_gemm_fp32_tc.o: src/fp32_tc/cublas_gemm_fp32_tc.cu.o
-.PHONY : src/fp32_tc/cublas_gemm_fp32_tc.o
-
-# target to build an object file
-src/fp32_tc/cublas_gemm_fp32_tc.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.o
-.PHONY : src/fp32_tc/cublas_gemm_fp32_tc.cu.o
-
-src/fp32_tc/cublas_gemm_fp32_tc.i: src/fp32_tc/cublas_gemm_fp32_tc.cu.i
-.PHONY : src/fp32_tc/cublas_gemm_fp32_tc.i
-
-# target to preprocess a source file
-src/fp32_tc/cublas_gemm_fp32_tc.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.i
-.PHONY : src/fp32_tc/cublas_gemm_fp32_tc.cu.i
-
-src/fp32_tc/cublas_gemm_fp32_tc.s: src/fp32_tc/cublas_gemm_fp32_tc.cu.s
-.PHONY : src/fp32_tc/cublas_gemm_fp32_tc.s
-
-# target to generate assembly for a file
-src/fp32_tc/cublas_gemm_fp32_tc.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.s
-.PHONY : src/fp32_tc/cublas_gemm_fp32_tc.cu.s
-
-src/fp32_tc/gemm_fp32_r2z_tc1.o: src/fp32_tc/gemm_fp32_r2z_tc1.cu.o
-.PHONY : src/fp32_tc/gemm_fp32_r2z_tc1.o
-
-# target to build an object file
-src/fp32_tc/gemm_fp32_r2z_tc1.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.o
-.PHONY : src/fp32_tc/gemm_fp32_r2z_tc1.cu.o
-
-src/fp32_tc/gemm_fp32_r2z_tc1.i: src/fp32_tc/gemm_fp32_r2z_tc1.cu.i
-.PHONY : src/fp32_tc/gemm_fp32_r2z_tc1.i
-
-# target to preprocess a source file
-src/fp32_tc/gemm_fp32_r2z_tc1.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.i
-.PHONY : src/fp32_tc/gemm_fp32_r2z_tc1.cu.i
-
-src/fp32_tc/gemm_fp32_r2z_tc1.s: src/fp32_tc/gemm_fp32_r2z_tc1.cu.s
-.PHONY : src/fp32_tc/gemm_fp32_r2z_tc1.s
-
-# target to generate assembly for a file
-src/fp32_tc/gemm_fp32_r2z_tc1.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.s
-.PHONY : src/fp32_tc/gemm_fp32_r2z_tc1.cu.s
-
-src/helpers.o: src/helpers.cu.o
-.PHONY : src/helpers.o
-
-# target to build an object file
-src/helpers.cu.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/helpers.cu.o
-.PHONY : src/helpers.cu.o
-
-src/helpers.i: src/helpers.cu.i
-.PHONY : src/helpers.i
-
-# target to preprocess a source file
-src/helpers.cu.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/helpers.cu.i
-.PHONY : src/helpers.cu.i
-
-src/helpers.s: src/helpers.cu.s
-.PHONY : src/helpers.s
-
-# target to generate assembly for a file
-src/helpers.cu.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/helpers.cu.s
-.PHONY : src/helpers.cu.s
+src/fp32/cublas_gemm_fp32_pedantic.cu.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/cu_x_gemm.dir/build.make CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.s
+.PHONY : src/fp32/cublas_gemm_fp32_pedantic.cu.s
 
 src/main.o: src/main.cu.o
 .PHONY : src/main.o
@@ -450,42 +186,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... cu_x_gemm"
-	@echo "... src/bf16/gemm_bf16.o"
-	@echo "... src/bf16/gemm_bf16.i"
-	@echo "... src/bf16/gemm_bf16.s"
-	@echo "... src/bf16/gemm_bf16_naive.o"
-	@echo "... src/bf16/gemm_bf16_naive.i"
-	@echo "... src/bf16/gemm_bf16_naive.s"
-	@echo "... src/bf16/gemm_bf16_wmma_h100.o"
-	@echo "... src/bf16/gemm_bf16_wmma_h100.i"
-	@echo "... src/bf16/gemm_bf16_wmma_h100.s"
-	@echo "... src/bf16/gemm_bf16_wmma_rtx5070.o"
-	@echo "... src/bf16/gemm_bf16_wmma_rtx5070.i"
-	@echo "... src/bf16/gemm_bf16_wmma_rtx5070.s"
-	@echo "... src/cublas_gemm.o"
-	@echo "... src/cublas_gemm.i"
-	@echo "... src/cublas_gemm.s"
-	@echo "... src/fp32/gemm_fp32_master.o"
-	@echo "... src/fp32/gemm_fp32_master.i"
-	@echo "... src/fp32/gemm_fp32_master.s"
-	@echo "... src/fp32/gemm_fp32_naive.o"
-	@echo "... src/fp32/gemm_fp32_naive.i"
-	@echo "... src/fp32/gemm_fp32_naive.s"
-	@echo "... src/fp32/gemm_fp32_r2z.o"
-	@echo "... src/fp32/gemm_fp32_r2z.i"
-	@echo "... src/fp32/gemm_fp32_r2z.s"
-	@echo "... src/fp32_tc/cublas_gemm_fp32_pedantic.o"
-	@echo "... src/fp32_tc/cublas_gemm_fp32_pedantic.i"
-	@echo "... src/fp32_tc/cublas_gemm_fp32_pedantic.s"
-	@echo "... src/fp32_tc/cublas_gemm_fp32_tc.o"
-	@echo "... src/fp32_tc/cublas_gemm_fp32_tc.i"
-	@echo "... src/fp32_tc/cublas_gemm_fp32_tc.s"
-	@echo "... src/fp32_tc/gemm_fp32_r2z_tc1.o"
-	@echo "... src/fp32_tc/gemm_fp32_r2z_tc1.i"
-	@echo "... src/fp32_tc/gemm_fp32_r2z_tc1.s"
-	@echo "... src/helpers.o"
-	@echo "... src/helpers.i"
-	@echo "... src/helpers.s"
+	@echo "... src/fp32/cublas_gemm_fp32_pedantic.o"
+	@echo "... src/fp32/cublas_gemm_fp32_pedantic.i"
+	@echo "... src/fp32/cublas_gemm_fp32_pedantic.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

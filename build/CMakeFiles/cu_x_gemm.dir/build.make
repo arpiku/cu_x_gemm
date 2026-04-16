@@ -87,230 +87,41 @@ CMakeFiles/cu_x_gemm.dir/src/main.cu.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/main.cu.s"
 	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
 
-CMakeFiles/cu_x_gemm.dir/src/helpers.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/helpers.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/helpers.cu.o: /home/arpiku/cu_x_gemm/src/helpers.cu
-CMakeFiles/cu_x_gemm.dir/src/helpers.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/helpers.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/helpers.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/helpers.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/helpers.cu -o CMakeFiles/cu_x_gemm.dir/src/helpers.cu.o
+CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
+CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
+CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.o: /home/arpiku/cu_x_gemm/src/fp32/cublas_gemm_fp32_pedantic.cu
+CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.o"
+	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/fp32/cublas_gemm_fp32_pedantic.cu -o CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.o
 
-CMakeFiles/cu_x_gemm.dir/src/helpers.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/helpers.cu.i"
+CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.i"
 	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
 
-CMakeFiles/cu_x_gemm.dir/src/helpers.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/helpers.cu.s"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.o: /home/arpiku/cu_x_gemm/src/cublas_gemm.cu
-CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/cublas_gemm.cu -o CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.o
-
-CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.i"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.s"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.o: /home/arpiku/cu_x_gemm/src/bf16/gemm_bf16.cu
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/bf16/gemm_bf16.cu -o CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.o
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.i"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.s"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.o: /home/arpiku/cu_x_gemm/src/bf16/gemm_bf16_naive.cu
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/bf16/gemm_bf16_naive.cu -o CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.o
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.i"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.s"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.o: /home/arpiku/cu_x_gemm/src/bf16/gemm_bf16_wmma_h100.cu
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/bf16/gemm_bf16_wmma_h100.cu -o CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.o
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.i"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.s"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.o: /home/arpiku/cu_x_gemm/src/bf16/gemm_bf16_wmma_rtx5070.cu
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/bf16/gemm_bf16_wmma_rtx5070.cu -o CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.o
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.i"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.s"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.o: /home/arpiku/cu_x_gemm/src/fp32/gemm_fp32_naive.cu
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/fp32/gemm_fp32_naive.cu -o CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.o
-
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.i"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.s"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.o: /home/arpiku/cu_x_gemm/src/fp32/gemm_fp32_r2z.cu
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/fp32/gemm_fp32_r2z.cu -o CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.o
-
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.i"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.s"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.o: /home/arpiku/cu_x_gemm/src/fp32/gemm_fp32_master.cu
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/fp32/gemm_fp32_master.cu -o CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.o
-
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.i"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.s"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o: /home/arpiku/cu_x_gemm/src/fp32_tc/cublas_gemm_fp32_pedantic.cu
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/fp32_tc/cublas_gemm_fp32_pedantic.cu -o CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o
-
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.i"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.s"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.o: /home/arpiku/cu_x_gemm/src/fp32_tc/cublas_gemm_fp32_tc.cu
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/fp32_tc/cublas_gemm_fp32_tc.cu -o CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.o
-
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.i"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.s"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.o: CMakeFiles/cu_x_gemm.dir/flags.make
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.o: CMakeFiles/cu_x_gemm.dir/includes_CUDA.rsp
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.o: /home/arpiku/cu_x_gemm/src/fp32_tc/gemm_fp32_r2z_tc1.cu
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.o: CMakeFiles/cu_x_gemm.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CUDA object CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.o"
-	/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.o -MF CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.o.d -x cu -c /home/arpiku/cu_x_gemm/src/fp32_tc/gemm_fp32_r2z_tc1.cu -o CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.o
-
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.i"
-	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
-
-CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.s"
+CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.s"
 	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
 
 # Object files for target cu_x_gemm
 cu_x_gemm_OBJECTS = \
 "CMakeFiles/cu_x_gemm.dir/src/main.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/helpers.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.o" \
-"CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.o"
+"CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.o"
 
 # External object files for target cu_x_gemm
 cu_x_gemm_EXTERNAL_OBJECTS =
 
 cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/main.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/helpers.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/cublas_gemm.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_naive.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_h100.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/bf16/gemm_bf16_wmma_rtx5070.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_naive.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_r2z.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/fp32/gemm_fp32_master.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_pedantic.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/fp32_tc/cublas_gemm_fp32_tc.cu.o
-cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/fp32_tc/gemm_fp32_r2z_tc1.cu.o
+cu_x_gemm: CMakeFiles/cu_x_gemm.dir/src/fp32/cublas_gemm_fp32_pedantic.cu.o
 cu_x_gemm: CMakeFiles/cu_x_gemm.dir/build.make
 cu_x_gemm: /opt/cuda/targets/x86_64-linux/lib/libcublas.so
 cu_x_gemm: /opt/cuda/targets/x86_64-linux/lib/libcudart.so
 cu_x_gemm: /opt/cuda/targets/x86_64-linux/lib/libcublasLt.so
 cu_x_gemm: /opt/cuda/targets/x86_64-linux/lib/libculibos.a
 cu_x_gemm: /usr/lib/librt.a
-cu_x_gemm: /usr/lib/libgomp.so
-cu_x_gemm: /usr/lib/libpthread.a
 cu_x_gemm: CMakeFiles/cu_x_gemm.dir/linkLibs.rsp
 cu_x_gemm: CMakeFiles/cu_x_gemm.dir/objects1.rsp
 cu_x_gemm: CMakeFiles/cu_x_gemm.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Linking CUDA executable cu_x_gemm"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/arpiku/cu_x_gemm/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CUDA executable cu_x_gemm"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/cu_x_gemm.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
